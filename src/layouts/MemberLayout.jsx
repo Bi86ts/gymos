@@ -1,14 +1,28 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 
 const navItems = [
   { path: '/member', icon: 'fitness_center', label: 'Training', exact: true },
   { path: '/member/plan', icon: 'calendar_month', label: 'Plan' },
-  { path: '/member/goals', icon: 'insights', label: 'Goals' },
-  { path: '/member/checkin', icon: 'person', label: 'Profile' },
+  { path: '/member/chat', icon: 'forum', label: 'Chat', badge: true },
+  { path: '/member/profile', icon: 'person', label: 'Profile' },
 ]
 
 export default function MemberLayout() {
   const location = useLocation()
+  const [firstName, setFirstName] = useState('Alex')
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('gymos_member')
+      if (saved) {
+        const data = JSON.parse(saved)
+        if (data.name) {
+          setFirstName(data.name.split(' ')[0])
+        }
+      }
+    } catch (e) {}
+  }, [])
 
   return (
     <div className="min-h-screen pb-28">
@@ -22,7 +36,8 @@ export default function MemberLayout() {
           </div>
           <div className="flex flex-col">
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant font-label">MEMBER</span>
-            <span className="text-on-surface font-headline font-bold leading-none">Welcome, Alex</span>
+            <span className="text-on-surface font-headline font-bold leading-none mb-0.5">Welcome, {firstName}</span>
+            <span className="text-primary-dim text-[10px] font-bold tracking-wide italic">Your trainer: Coach Sarah</span>
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -44,17 +59,20 @@ export default function MemberLayout() {
           {navItems.map((item) => {
             const isActive = item.exact 
               ? location.pathname === item.path
-              : location.pathname === item.path
+              : location.pathname.startsWith(item.path)
             return (
               <NavLink
                 key={item.path}
                 to={item.path}
-                className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl active:scale-90 duration-200 ${
+                className={`relative flex flex-col items-center justify-center px-4 py-2 rounded-xl active:scale-90 duration-200 ${
                   isActive
                     ? 'text-primary bg-primary/10'
                     : 'text-on-surface-variant opacity-50 hover:text-primary transition-colors'
                 }`}
               >
+                {item.badge && (
+                  <span className="absolute top-1 right-3 w-2 h-2 bg-error rounded-full border border-surface"></span>
+                )}
                 <span className="material-symbols-outlined" style={isActive ? {fontVariationSettings: "'FILL' 1"} : {}}>{item.icon}</span>
                 <span className="font-label text-[10px] font-bold uppercase tracking-widest mt-1">{item.label}</span>
               </NavLink>

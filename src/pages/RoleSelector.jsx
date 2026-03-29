@@ -72,6 +72,29 @@ export default function RoleSelector() {
         ))}
       </div>
 
+      {/* Onboarding CTA */}
+      <div className="mt-10 w-full max-w-5xl relative z-10">
+        <Link
+          to="/onboarding"
+          className="group w-full flex items-center justify-between p-6 bg-gradient-to-r from-primary/10 to-primary-container/5 hover:from-primary/20 hover:to-primary-container/10 border-2 border-primary/20 hover:border-primary/40 rounded-xl transition-all duration-300 relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-primary/20 group-hover:bg-primary flex items-center justify-center transition-colors duration-300">
+              <span className="material-symbols-outlined text-primary group-hover:text-on-primary-fixed text-2xl" style={{fontVariationSettings: "'FILL' 1"}}>person_add</span>
+            </div>
+            <div>
+              <h3 className="font-headline font-black text-on-surface text-lg uppercase tracking-tight">New Here? Sign Up</h3>
+              <p className="text-on-surface-variant text-sm">Complete onboarding to get your personalized training protocol.</p>
+            </div>
+          </div>
+          <div className="relative z-10 flex items-center gap-2 text-primary font-bold text-sm shrink-0">
+            <span>Get Started</span>
+            <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+          </div>
+        </Link>
+      </div>
+
       {/* Footer tagline */}
       <p className="text-on-surface-variant/50 text-xs mt-16 font-label uppercase tracking-widest">Kinetic Forge — v0.1 MVP</p>
     </div>

@@ -1,80 +1,70 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-
-const reasons = [
-  { id: 'unwell', icon: 'sick', label: 'Feeling Unwell', color: 'text-error' },
-  { id: 'busy', icon: 'work', label: 'Too Busy Today', color: 'text-secondary' },
-  { id: 'travel', icon: 'flight', label: 'Travelling', color: 'text-tertiary' },
-  { id: 'sore', icon: 'healing', label: 'Too Sore / Recovery', color: 'text-primary-dim' },
-  { id: 'personal', icon: 'person_off', label: 'Personal Reasons', color: 'text-on-surface-variant' },
-  { id: 'other', icon: 'more_horiz', label: 'Other', color: 'text-on-surface-variant' },
-]
+import { useState } from 'react'
 
 export default function SkipSession() {
-  const [selected, setSelected] = useState(null)
-  const [submitted, setSubmitted] = useState(false)
   const navigate = useNavigate()
+  const [selectedReason, setSelectedReason] = useState(null)
 
-  const handleSubmit = () => {
-    if (selected) {
-      setSubmitted(true)
-      setTimeout(() => navigate('/member'), 2000)
-    }
-  }
+  const reasons = [
+    { id: 'tired', icon: 'battery_1_bar', label: 'Too Tired / Sore' },
+    { id: 'busy', icon: 'schedule', label: 'Schedule Conflict' },
+    { id: 'sick', icon: 'sick', label: 'Illness / Injury' },
+    { id: 'travel', icon: 'flight', label: 'Traveling' },
+    { id: 'weather', icon: 'thunderstorm', label: 'Bad Weather' },
+  ]
 
-  if (submitted) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
-        <div className="w-20 h-20 rounded-full bg-surface-container-highest flex items-center justify-center mb-6">
-          <span className="material-symbols-outlined text-primary text-4xl" style={{fontVariationSettings: "'FILL' 1"}}>thumb_up</span>
-        </div>
-        <h2 className="font-headline text-2xl font-bold mb-2">Got It, Alex.</h2>
-        <p className="text-on-surface-variant">No worries — rest smart, come back stronger. Your streak is safe for today.</p>
-        <div className="mt-6 flex items-center gap-2 text-primary">
-          <span className="material-symbols-outlined text-sm">local_fire_department</span>
-          <span className="text-sm font-bold">Streak protection activated</span>
-        </div>
-      </div>
-    )
+  const handleSkip = (reasonId = null) => {
+    // API Call to register skip
+    navigate('/member/recovery')
   }
 
   return (
-    <div className="space-y-8 pb-8">
-      <div>
-        <h2 className="font-headline text-2xl font-bold mb-2">Skip Today's Session</h2>
-        <p className="text-on-surface-variant">No judgment. Just pick a reason so we can adjust your plan.</p>
+    <div className="min-h-screen bg-surface flex flex-col justify-center px-6 max-w-lg mx-auto pb-16 animate-in fade-in zoom-in-95 duration-500">
+      
+      <div className="text-center space-y-4 mb-8 relative">
+        <div className="absolute inset-0 flex items-center justify-center opacity-5 blur-2xl -z-10">
+          <span className="material-symbols-outlined text-[200px] text-error">close</span>
+        </div>
+        <span className="material-symbols-outlined text-6xl text-on-surface-variant font-light mb-2">event_busy</span>
+        <h1 className="text-3xl font-black font-headline text-on-surface uppercase tracking-tight">Skipping Today?</h1>
+        <p className="text-on-surface-variant text-sm px-4">Help us adjust your protocol by telling us why. Your trainer will be notified.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {reasons.map((reason) => (
+      <div className="space-y-3 mb-12">
+        {reasons.map((r) => (
           <button
-            key={reason.id}
-            onClick={() => setSelected(reason.id)}
-            className={`flex flex-col items-center justify-center p-6 rounded-xl transition-all active:scale-95 gap-3 ${
-              selected === reason.id
-                ? 'bg-surface-container-highest border-2 border-primary/30'
-                : 'bg-surface-container border border-outline-variant/10 hover:bg-surface-container-highest'
+            key={r.id}
+            onClick={() => { setSelectedReason(r.id); handleSkip(r.id) }}
+            className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all active:scale-95 ${
+              selectedReason === r.id 
+                ? 'border-error text-error bg-error/10' 
+                : 'border-outline-variant/10 bg-surface-container hover:border-on-surface-variant/30 text-on-surface'
             }`}
           >
-            <span className={`material-symbols-outlined text-3xl ${reason.color}`} style={{fontVariationSettings: "'FILL' 1"}}>{reason.icon}</span>
-            <span className="text-sm font-medium text-center">{reason.label}</span>
+            <div className="flex items-center gap-4">
+              <span className="material-symbols-outlined text-2xl">{r.icon}</span>
+              <span className="font-bold text-sm tracking-wide">{r.label}</span>
+            </div>
+            <span className="material-symbols-outlined text-outline-variant">chevron_right</span>
           </button>
         ))}
       </div>
 
-      <button
-        onClick={handleSubmit}
-        className={`w-full py-4 rounded-full font-headline font-bold text-lg uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-95 ${
-          selected
-            ? 'bg-surface-container-highest text-on-surface border border-outline-variant/20'
-            : 'bg-surface-container text-on-surface-variant cursor-not-allowed'
-        }`}
-      >
-        Log & Skip
-        <span className="material-symbols-outlined">check</span>
-      </button>
-
-      <p className="text-xs text-on-surface-variant text-center">Your trainer will be notified. Recovery plan may be suggested if needed.</p>
+      <div className="flex flex-col gap-4">
+        <button
+          onClick={() => handleSkip()}
+          className="w-full border-2 border-surface-container-highest bg-surface-container-low text-on-surface-variant py-4 rounded-full font-black text-xs tracking-[0.2em] active:scale-95 hover:bg-surface-container transition-all uppercase"
+        >
+          Skip Without Reason
+        </button>
+        <button
+          onClick={() => navigate('/member')}
+          className="w-full bg-primary text-on-primary-fixed py-4 rounded-full font-black text-xs tracking-[0.2em] shadow-lg shadow-primary/20 active:scale-95 transition-all text-center uppercase"
+        >
+          Nevermind, I'm going
+        </button>
+      </div>
+      
     </div>
   )
 }
