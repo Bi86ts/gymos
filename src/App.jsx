@@ -24,6 +24,7 @@ import RetentionDashboard from './pages/owner/RetentionDashboard'
 import ChurnRiskList from './pages/owner/ChurnRiskList'
 import RenewalDashboard from './pages/owner/RenewalDashboard'
 import RevenueDashboard from './pages/owner/RevenueDashboard'
+import OffersDashboard from './pages/owner/OffersDashboard'
 
 export default function App() {
   return (
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="churn" element={<ChurnRiskList />} />
         <Route path="renewals" element={<RenewalDashboard />} />
         <Route path="revenue" element={<RevenueDashboard />} />
+        <Route path="offers" element={<OffersDashboard />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -11,6 +11,10 @@ export default function OnboardingFlow() {
   const [objective, setObjective] = useState('')
   const [experience, setExperience] = useState('')
   const [motivation, setMotivation] = useState('')
+  const [limitations, setLimitations] = useState([])
+  const [limitationDetails, setLimitationDetails] = useState('')
+  const [conditions, setConditions] = useState([])
+  const [conditionDetails, setConditionDetails] = useState('')
   const [workoutDays, setWorkoutDays] = useState(4)
   const [workoutTime, setWorkoutTime] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -18,7 +22,7 @@ export default function OnboardingFlow() {
 
   const handleNext = () => {
     if (step === 1 && (!name || !weight || !height || !age)) return
-    if (step === 2 && (!objective || !experience)) return
+    if (step === 2 && (!objective || !experience || limitations.length === 0 || conditions.length === 0)) return
     if (step === 3 && (!workoutTime || !targetWeight)) return
 
     if (step < 3) {
@@ -45,7 +49,11 @@ export default function OnboardingFlow() {
         objective: objective.charAt(0).toUpperCase() + objective.slice(1),
         targetWeight,
         workoutTime,
-        workoutDays
+        workoutDays,
+        limitations,
+        limitationDetails,
+        conditions,
+        conditionDetails
       }
       localStorage.setItem('gymos_member', JSON.stringify(data))
       setStep(4) // Success state
@@ -58,9 +66,37 @@ export default function OnboardingFlow() {
 
   const canProceed = () => {
     if (step === 1) return name && weight && height && age
-    if (step === 2) return objective && experience
+    if (step === 2) return objective && experience && limitations.length > 0 && conditions.length > 0
     if (step === 3) return workoutTime && targetWeight
     return false
+  }
+
+  const toggleLimitation = (item) => {
+    if (item === "None — I'm good to go") {
+      setLimitations([item])
+      return
+    }
+    let next = limitations.includes("None — I'm good to go") ? [] : [...limitations]
+    if (next.includes(item)) {
+      next = next.filter(i => i !== item)
+    } else {
+      next.push(item)
+    }
+    setLimitations(next)
+  }
+
+  const toggleCondition = (item) => {
+    if (item === "None of the above") {
+      setConditions([item])
+      return
+    }
+    let next = conditions.includes("None of the above") ? [] : [...conditions]
+    if (next.includes(item)) {
+      next = next.filter(i => i !== item)
+    } else {
+      next.push(item)
+    }
+    setConditions(next)
   }
 
   const objectives = [
@@ -277,6 +313,90 @@ export default function OnboardingFlow() {
               <div className="text-right text-[10px] text-on-surface-variant border-t border-outline-variant/10 pt-2 mt-2">
                 {motivation.length}/100
               </div>
+            </div>
+
+            {/* Physical Limitations */}
+            <div className="mt-8 bg-surface-container rounded-2xl p-5 border border-outline-variant/10">
+              <h3 className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-1">
+                <span className="material-symbols-outlined text-primary text-sm" style={{fontVariationSettings: "'FILL' 1"}}>healing</span>
+                Physical limitations
+              </h3>
+              <p className="text-on-surface-variant text-xs mb-4">Any areas we should avoid in your training? <span className="text-primary/70">Select all that apply.</span></p>
+              <div className="flex flex-wrap gap-2">
+                {['Lower back', 'Knees', 'Shoulders', 'Wrists / Elbows', 'Neck', "None — I'm good to go"].map(item => (
+                  <button
+                    key={item}
+                    onClick={() => toggleLimitation(item)}
+                    className={`px-4 py-2 text-xs font-bold rounded-lg border transition-all ${
+                      limitations.includes(item)
+                        ? 'bg-primary/20 border-primary text-primary shadow-sm shadow-primary/10'
+                        : 'bg-surface-container-highest border-outline-variant/20 text-on-surface hover:border-primary/40'
+                    }`}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+              
+              {limitations.length > 0 && !limitations.includes("None — I'm good to go") && (
+                <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 flex items-center gap-1.5"><span className="material-symbols-outlined text-xs">edit</span> Briefly describe the problem</p>
+                  <textarea
+                    value={limitationDetails}
+                    onChange={(e) => setLimitationDetails(e.target.value)}
+                    placeholder="e.g. Sharp pain in right knee when squatting deep."
+                    rows="2"
+                    className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl p-3 text-sm text-on-surface placeholder:text-surface-container-highest focus:border-primary/50 focus:outline-none resize-none transition-colors"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Health Conditions */}
+            <div className="mt-8 bg-surface-container rounded-2xl p-5 border border-outline-variant/10">
+              <h3 className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-1">
+                <span className="material-symbols-outlined text-primary text-sm" style={{fontVariationSettings: "'FILL' 1"}}>favorite</span>
+                Health conditions
+              </h3>
+              <p className="text-on-surface-variant text-xs mb-4 leading-snug">Anything we should know about your health?<br/><span className="text-on-surface-variant/70 text-[10px]">This helps us personalise your diet plan and training intensity.</span></p>
+              <div className="flex flex-col gap-2">
+                {[
+                  'Diabetes (Type 1 or Type 2)',
+                  'High blood pressure',
+                  'Heart condition',
+                  'Thyroid disorder',
+                  'PCOD / PCOS',
+                  'None of the above'
+                ].map(item => (
+                  <button
+                    key={item}
+                    onClick={() => toggleCondition(item)}
+                    className={`w-full py-3 px-4 text-xs font-bold rounded-xl border transition-all text-left flex items-center gap-3 ${
+                      conditions.includes(item)
+                        ? 'bg-primary/20 border-primary text-primary shadow-sm shadow-primary/10'
+                        : 'bg-surface-container-low border-outline-variant/20 text-on-surface hover:border-primary/40'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${conditions.includes(item) ? 'border-primary bg-primary text-on-primary-fixed' : 'border-outline-variant/50 bg-transparent'}`}>
+                      {conditions.includes(item) && <span className="material-symbols-outlined text-[10px] font-black">check</span>}
+                    </div>
+                    {item}
+                  </button>
+                ))}
+              </div>
+              
+              {conditions.length > 0 && !conditions.includes('None of the above') && (
+                <div className="mt-4 animate-in fade-in slide-in-from-top-2">
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 flex items-center gap-1.5"><span className="material-symbols-outlined text-xs">edit</span> Anything else your trainer should know?</p>
+                  <textarea
+                    value={conditionDetails}
+                    onChange={(e) => setConditionDetails(e.target.value)}
+                    placeholder="e.g. 'on medication', 'doctor advised low intensity only'"
+                    rows="2"
+                    className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl p-3 text-sm text-on-surface placeholder:text-surface-container-highest focus:border-primary/50 focus:outline-none resize-none transition-colors"
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}

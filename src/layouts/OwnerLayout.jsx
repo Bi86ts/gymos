@@ -2,6 +2,7 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom'
 
 const navItems = [
   { path: '/owner', icon: 'dashboard', label: 'Dashboard', exact: true },
+  { path: '/owner/offers', icon: 'local_offer', label: 'Offers' },
   { path: '/owner/churn', icon: 'analytics', label: 'Churn' },
   { path: '/owner/renewals', icon: 'sync_saved_locally', label: 'Renewals' },
   { path: '/owner/revenue', icon: 'payments', label: 'Revenue' },
