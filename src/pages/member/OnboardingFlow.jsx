@@ -17,6 +17,9 @@ export default function OnboardingFlow() {
   const [conditionDetails, setConditionDetails] = useState('')
   const [workoutDays, setWorkoutDays] = useState(4)
   const [workoutTime, setWorkoutTime] = useState('')
+  const [selectedPackage, setSelectedPackage] = useState('basic')
+  const [selectedDuration, setSelectedDuration] = useState(3)
+  const [paymentInitiated, setPaymentInitiated] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const navigate = useNavigate()
 
@@ -24,12 +27,30 @@ export default function OnboardingFlow() {
     if (step === 1 && (!name || !weight || !height || !age)) return
     if (step === 2 && (!objective || !experience || limitations.length === 0 || conditions.length === 0)) return
     if (step === 3 && (!workoutTime || !targetWeight)) return
+    if (step === 4 && (!selectedPackage || !selectedDuration)) return
 
-    if (step < 3) {
+    if (step === 4 && !paymentInitiated) {
+      handlePayment()
+      return
+    }
+
+    if (step < 4) {
       setStep(s => s + 1)
     } else {
       finishOnboarding()
     }
+  }
+
+  const handlePayment = () => {
+    const upiId = 'brajrajchaturvedi28@okhdfcbank'
+    const amount = getPricing()
+    const upiUrl = `upi://pay?pa=${upiId}&pn=GymOS&am=${amount}&cu=INR`
+    
+    // Attempt to open UPI app
+    window.location.href = upiUrl
+    
+    // Change UI state to wait for payment completion
+    setPaymentInitiated(true)
   }
 
   const handleBack = () => {
@@ -53,10 +74,12 @@ export default function OnboardingFlow() {
         limitations,
         limitationDetails,
         conditions,
-        conditionDetails
+        conditionDetails,
+        package: selectedPackage,
+        duration: selectedDuration
       }
       localStorage.setItem('gymos_member', JSON.stringify(data))
-      setStep(4) // Success state
+      setStep(5) // Success state
     }, 1500)
   }
 
@@ -68,7 +91,16 @@ export default function OnboardingFlow() {
     if (step === 1) return name && weight && height && age
     if (step === 2) return objective && experience && limitations.length > 0 && conditions.length > 0
     if (step === 3) return workoutTime && targetWeight
+    if (step === 4) return selectedPackage && selectedDuration
     return false
+  }
+
+  const getPricing = () => {
+    const baseRate = selectedPackage === 'advanced' ? 4000 : 2000;
+    let discount = 0;
+    if (selectedDuration === 6) discount = 0.15;
+    if (selectedDuration === 12) discount = 0.25;
+    return Math.round(baseRate * selectedDuration * (1 - discount));
   }
 
   const toggleLimitation = (item) => {
@@ -126,19 +158,19 @@ export default function OnboardingFlow() {
   return (
     <div className="min-h-screen bg-surface flex flex-col p-6 max-w-lg mx-auto pb-8">
       {/* Header / Progress */}
-      {step < 4 && (
+      {step < 5 && (
         <div className="pt-8 pb-10">
           <div className="flex justify-between items-center mb-4">
             <button onClick={handleBack} className="text-on-surface-variant hover:text-on-surface transition-colors">
               <span className="material-symbols-outlined">arrow_back</span>
             </button>
-            <span className="text-primary font-bold tracking-widest uppercase text-xs">Step {step} of 3</span>
+            <span className="text-primary font-bold tracking-widest uppercase text-xs">Step {step} of 4</span>
             <div className="w-6"></div>
           </div>
           <div className="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-primary to-primary-container rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${(step / 3) * 100}%` }}
+              style={{ width: `${(step / 4) * 100}%` }}
             ></div>
           </div>
         </div>
@@ -492,8 +524,96 @@ export default function OnboardingFlow() {
           </div>
         )}
 
-        {/* Step 4: Success */}
+        {/* Step 4: Package & Payment */}
         {step === 4 && (
+          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
+            <div>
+              <h1 className="text-3xl font-black font-headline text-on-surface mb-2">Select your package.</h1>
+              <p className="text-on-surface-variant text-sm">Choose the level of service and commitment.</p>
+            </div>
+
+            {/* Package Selection */}
+            <div className="space-y-3">
+              <div className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-2">
+                <span className="material-symbols-outlined text-primary text-sm">fitness_center</span>
+                Service Level
+              </div>
+              {[
+                { id: 'basic', title: 'Basic Coaching', desc: 'Custom protocol, app access, gym floor support.', price: '₹2,000/mo' },
+                { id: 'advanced', title: 'Advanced Access', desc: '1-on-1 dedicated daily check-ins, macro coaching, VIP floor access.', price: '₹4,000/mo' }
+              ].map(pkg => (
+                <button
+                  key={pkg.id}
+                  onClick={() => setSelectedPackage(pkg.id)}
+                  className={`w-full text-left p-5 rounded-2xl border-2 transition-all relative overflow-hidden group ${
+                    selectedPackage === pkg.id
+                      ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10'
+                      : 'border-outline-variant/20 bg-surface-container-low hover:border-primary/50'
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-black text-on-surface text-lg uppercase">{pkg.title}</span>
+                    <span className="text-primary font-bold text-sm bg-primary/10 px-2 py-0.5 rounded-md">{pkg.price}</span>
+                  </div>
+                  <p className="text-xs text-on-surface-variant">{pkg.desc}</p>
+                  {selectedPackage === pkg.id && (
+                    <div className="absolute top-0 right-0 w-0 h-0 border-t-[30px] border-t-primary border-l-[30px] border-l-transparent">
+                      <span className="material-symbols-outlined text-on-primary-fixed text-[10px] absolute -top-7 -right-1">check</span>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Duration Selection */}
+            <div className="space-y-3 mt-6">
+              <div className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-2">
+                <span className="material-symbols-outlined text-primary text-sm">calendar_month</span>
+                Commitment Duration
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { value: 3, label: '3 Months', sub: 'Standard' },
+                  { value: 6, label: '6 Months', sub: '15% Off' },
+                  { value: 12, label: '12 Months', sub: '25% Off' }
+                ].map(dur => (
+                  <button
+                    key={dur.value}
+                    onClick={() => setSelectedDuration(dur.value)}
+                    className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${
+                        selectedDuration === dur.value
+                          ? 'bg-primary/20 border-primary text-primary shadow-sm shadow-primary/10' 
+                          : 'bg-surface-container-low border-outline-variant/20 text-on-surface hover:border-primary/40'
+                      }`}
+                  >
+                    <span className="font-black text-xl mb-1">{dur.value} <span className="text-xs font-bold">mo</span></span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                      selectedDuration === dur.value ? 'bg-primary/20 text-primary' : 'bg-surface-container-highest text-on-surface-variant'
+                    }`}>
+                      {dur.sub}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Payment Summary */}
+            <div className="mt-8 bg-surface-container rounded-2xl p-6 border border-primary/30 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+              <div className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest mb-1">Total Amount</div>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="text-2xl text-on-surface font-bold">₹</span>
+                <span className="text-5xl font-headline font-black text-primary">{getPricing().toLocaleString()}</span>
+              </div>
+              <div className="text-xs text-on-surface-variant mt-2 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-xs">lock</span> Secure payment on next step
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 5: Success */}
+        {step === 5 && (
           <div className="text-center space-y-8 animate-in slide-in-from-bottom-8 duration-700 fade-in py-12">
             <div className="w-32 h-32 bg-primary/20 rounded-full mx-auto flex items-center justify-center relative">
               <div className="absolute inset-0 bg-primary/10 rounded-full animate-ping"></div>
@@ -550,7 +670,7 @@ export default function OnboardingFlow() {
       </div>
 
       {/* Bottom CTA */}
-      {step < 4 && (
+      {step < 5 && (
         <div className="pt-8">
           <button
             onClick={handleNext}
@@ -564,11 +684,19 @@ export default function OnboardingFlow() {
               </>
             ) : (
               <>
-                {step === 3 ? 'FINISH SETUP' : 'CONTINUE'}
-                <span className="material-symbols-outlined">arrow_forward</span>
+                {step === 4 
+                  ? (paymentInitiated ? "I'VE COMPLETED PAYMENT" : `PAY ₹${getPricing().toLocaleString()} VIA UPI`) 
+                  : 'CONTINUE'}
+                {step !== 4 && <span className="material-symbols-outlined">arrow_forward</span>}
               </>
             )}
           </button>
+          
+          {step === 4 && paymentInitiated && (
+            <p className="text-center text-[10px] text-on-surface-variant font-medium mt-3 tracking-wide uppercase">
+              Click after successful transfer to <br/> <strong className="text-primary">brajrajchaturvedi28@okhdfcbank</strong>
+            </p>
+          )}
         </div>
       )}
     </div>

@@ -14,10 +14,12 @@ export default function MemberProfile() {
     height: 177,
     goal: 'Bulk',
     goalProgress: 62,
-    daysUntilExpiry: 42,
-    joinDate: 'Jan 15, 2026',
+    daysUntilExpiry: 180,
+    joinDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     streak: 12,
     totalSessions: 84,
+    package: 'advanced',
+    duration: 6
   })
 
   useEffect(() => {
@@ -32,6 +34,9 @@ export default function MemberProfile() {
           weight: data.weight || prev.weight,
           height: data.height || prev.height,
           goal: data.objective || prev.goal,
+          package: data.package || prev.package,
+          duration: data.duration || prev.duration,
+          daysUntilExpiry: (data.duration || 6) * 30,
         }))
       }
     } catch (e) {
@@ -159,7 +164,7 @@ export default function MemberProfile() {
       <section className="bg-surface-container rounded-3xl p-6 border border-outline-variant/10 shadow-lg relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-primary/10 transition-all duration-700"></div>
         <div className="relative z-10">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2">
             <h3 className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-sm">card_membership</span>
               Subscription
@@ -168,6 +173,13 @@ export default function MemberProfile() {
               <span className="material-symbols-outlined text-xs">check_circle</span>
               <span className="text-[10px] font-black uppercase tracking-widest">Active</span>
             </div>
+          </div>
+          
+          <div className="mb-4">
+            <p className="text-lg font-black font-headline text-on-surface uppercase">{member.package === 'basic' ? 'Basic Coaching' : 'Advanced Access'}</p>
+            <p className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">
+              {member.duration} Month Plan
+            </p>
           </div>
 
           <div className="flex items-end justify-between mb-5">
@@ -183,7 +195,7 @@ export default function MemberProfile() {
                   cx="50" cy="50" fill="transparent" r="40"
                   stroke="currentColor"
                   strokeDasharray="251.2"
-                  strokeDashoffset={251.2 - (251.2 * (member.daysUntilExpiry / 180))}
+                  strokeDashoffset={251.2 - (251.2 * (member.daysUntilExpiry / (member.duration * 30)))}
                   strokeLinecap="round" strokeWidth="10"
                   style={{ transition: 'stroke-dashoffset 1s ease-in-out' }}
                 ></circle>
