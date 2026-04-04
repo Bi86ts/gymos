@@ -26,6 +26,9 @@ import RenewalDashboard from './pages/owner/RenewalDashboard'
 import RevenueDashboard from './pages/owner/RevenueDashboard'
 import OffersDashboard from './pages/owner/OffersDashboard'
 
+import TrainerMessageDashboard from './pages/trainer/TrainerMessageDashboard'
+import TrainerMessageDetail from './pages/trainer/TrainerMessageDetail'
+
 export default function App() {
   return (
     <Routes>
@@ -55,6 +58,8 @@ export default function App() {
         <Route path="members" element={<MemberDirectory />} />
         <Route path="member/:id" element={<MemberDetail />} />
         <Route path="schedule" element={<TrainerSchedule />} />
+        <Route path="messages" element={<TrainerMessageDashboard />} />
+        <Route path="messages/:id" element={<TrainerMessageDetail />} />
         <Route path="profile" element={<TrainerProfile />} />
       </Route>
 

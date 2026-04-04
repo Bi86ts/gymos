@@ -13,6 +13,8 @@ export default function MemberProfile() {
     weight: 78,
     height: 177,
     goal: 'Bulk',
+    experience: 'Experienced',
+    motivation: 'I am a powerhouse who never gives up',
     goalProgress: 62,
     daysUntilExpiry: 180,
     joinDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -34,6 +36,8 @@ export default function MemberProfile() {
           weight: data.weight || prev.weight,
           height: data.height || prev.height,
           goal: data.objective || prev.goal,
+          experience: data.experience || prev.experience,
+          motivation: data.motivation || prev.motivation,
           package: data.package || prev.package,
           duration: data.duration || prev.duration,
           daysUntilExpiry: (data.duration || 6) * 30,
@@ -86,7 +90,8 @@ export default function MemberProfile() {
           </div>
           <div>
             <h1 className="text-2xl font-black font-headline text-on-surface uppercase tracking-tight">{member.name}</h1>
-            <p className="text-on-surface-variant text-sm font-medium mt-0.5">Age {member.age} • Member since {member.joinDate}</p>
+            <p className="text-on-surface-variant text-sm font-medium mt-0.5">Age {member.age} • {member.experience} Lifter</p>
+            {member.motivation && <p className="text-on-surface italic font-medium mt-1">"{member.motivation}"</p>}
             <div className="flex items-center gap-2 mt-2">
               <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${gc.bg} ${gc.text} border ${gc.border}`}>
                 {member.goal} Track

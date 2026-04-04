@@ -15,7 +15,7 @@ export default function OnboardingFlow() {
   const [limitationDetails, setLimitationDetails] = useState('')
   const [conditions, setConditions] = useState([])
   const [conditionDetails, setConditionDetails] = useState('')
-  const [workoutDays, setWorkoutDays] = useState(4)
+  const [workoutDays, setWorkoutDays] = useState([])
   const [workoutTime, setWorkoutTime] = useState('')
   const [selectedPackage, setSelectedPackage] = useState('basic')
   const [selectedDuration, setSelectedDuration] = useState(3)
@@ -76,7 +76,9 @@ export default function OnboardingFlow() {
         conditions,
         conditionDetails,
         package: selectedPackage,
-        duration: selectedDuration
+        duration: selectedDuration,
+        experience,
+        motivation
       }
       localStorage.setItem('gymos_member', JSON.stringify(data))
       setStep(5) // Success state
@@ -90,7 +92,7 @@ export default function OnboardingFlow() {
   const canProceed = () => {
     if (step === 1) return name && weight && height && age
     if (step === 2) return objective && experience && limitations.length > 0 && conditions.length > 0
-    if (step === 3) return workoutTime && targetWeight
+    if (step === 3) return workoutTime && targetWeight && workoutDays.length > 0
     if (step === 4) return selectedPackage && selectedDuration
     return false
   }
@@ -309,18 +311,23 @@ export default function OnboardingFlow() {
                 <span className="material-symbols-outlined text-primary text-sm">fitness_center</span>
                 Experience Level
               </h3>
-              <div className="flex flex-col gap-2">
-                {['Beginner', 'Some Experience', 'Regular'].map(level => (
+              <div className="flex flex-col gap-3">
+                {[
+                  { id: 'Beginner', desc: 'New to the gym or just starting out.' },
+                  { id: 'Intermediate', desc: '1-2 years of consistent lifting.' },
+                  { id: 'Experienced', desc: '3+ years of serious training.' }
+                ].map(level => (
                   <button
-                    key={level}
-                    onClick={() => setExperience(level)}
-                    className={`w-full py-4 px-5 text-sm font-bold rounded-xl border transition-all text-left ${
-                      experience === level 
+                    key={level.id}
+                    onClick={() => setExperience(level.id)}
+                    className={`w-full py-4 px-5 text-sm font-bold rounded-xl border transition-all text-left flex flex-col gap-1 ${
+                      experience === level.id 
                         ? 'bg-primary/20 border-primary text-primary shadow-sm shadow-primary/10' 
                         : 'bg-surface-container-low border-outline-variant/20 text-on-surface hover:border-primary/40'
                     }`}
                   >
-                    {level}
+                    <span>{level.id}</span>
+                    <span className={`text-xs font-normal ${experience === level.id ? 'text-primary/90' : 'text-on-surface-variant'}`}>{level.desc}</span>
                   </button>
                 ))}
               </div>
@@ -328,19 +335,20 @@ export default function OnboardingFlow() {
 
             {/* Motivation */}
             <div className="mt-8 bg-surface-container rounded-2xl p-5 border border-outline-variant/10 group focus-within:border-primary/40 transition-colors">
-              <h3 className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex justify-between items-center mb-4">
+              <h3 className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex justify-between items-center mb-1">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary text-sm">psychology</span>
-                  Primary Motivation
+                  Your Identity Goal
                 </div>
                 <span className="normal-case tracking-normal opacity-70">Optional</span>
               </h3>
+              <p className="text-on-surface-variant text-xs mb-3 leading-snug">Who do you want to become? Focus on identity, not extrinsic outcomes.</p>
               <textarea
                 value={motivation}
                 onChange={(e) => setMotivation(e.target.value.substring(0, 100))}
-                placeholder="e.g. My daughter's wedding in December, or I'm fully done being sedentary."
+                placeholder="e.g. 'I am an athlete who trains consistently' rather than 'I want to lose 5kg'"
                 rows="3"
-                className="w-full bg-transparent border-none text-sm text-on-surface placeholder:text-surface-container-highest focus:outline-none resize-none px-1"
+                className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl p-3 text-sm text-on-surface placeholder:text-surface-container-highest focus:border-primary/50 focus:outline-none resize-none transition-colors"
               />
               <div className="text-right text-[10px] text-on-surface-variant border-t border-outline-variant/10 pt-2 mt-2">
                 {motivation.length}/100
@@ -437,41 +445,39 @@ export default function OnboardingFlow() {
         {step === 3 && (
           <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 fade-in">
             <div>
-              <h1 className="text-3xl font-black font-headline text-on-surface mb-2">How many days a week?</h1>
-              <p className="text-on-surface-variant text-sm">Your commitment level. No excuses.</p>
+              <h1 className="text-3xl font-black font-headline text-on-surface mb-2">Which days will you train?</h1>
+              <p className="text-on-surface-variant text-sm">Select the days you realistically plan to hit the gym.</p>
             </div>
 
-            <div className="bg-surface-container rounded-3xl p-8 relative overflow-hidden border border-outline-variant/10">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
-
-              <div className="relative z-10 text-center mb-8">
-                <div className="text-7xl font-headline font-black text-primary mb-2">{workoutDays}</div>
-                <div className="text-sm text-on-surface-variant font-bold uppercase tracking-widest">
-                  {workoutDays === 1 ? 'Day' : 'Days'} per week
-                </div>
+            <div className="bg-surface-container rounded-3xl p-6 relative overflow-hidden border border-outline-variant/10">
+              <div className="flex flex-wrap gap-3 justify-center relative z-10">
+                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                  <button
+                    key={day}
+                    onClick={() => {
+                      if (workoutDays.includes(day)) {
+                        setWorkoutDays(workoutDays.filter(d => d !== day))
+                      } else {
+                        setWorkoutDays([...workoutDays, day])
+                      }
+                    }}
+                    className={`w-14 h-14 rounded-2xl font-bold flex items-center justify-center transition-all ${
+                      workoutDays.includes(day)
+                        ? 'bg-primary text-on-primary-fixed scale-110 shadow-lg shadow-primary/20'
+                        : 'bg-surface-container-highest text-on-surface hover:bg-outline-variant/30'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                ))}
               </div>
-
-              <input
-                type="range"
-                min="1"
-                max="7"
-                value={workoutDays}
-                onChange={(e) => setWorkoutDays(Number(e.target.value))}
-                className="w-full accent-primary h-2 bg-surface-container-highest rounded-full appearance-none outline-none relative z-10"
-              />
-
-              <div className="flex justify-between mt-4 relative z-10">
-                <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Light</span>
-                <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Moderate</span>
-                <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Beast</span>
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-outline-variant/10 relative z-10">
-                <p className="text-xs text-on-surface-variant text-center">
-                  {workoutDays <= 2 && '💡 Great for beginners. Quality over quantity.'}
-                  {workoutDays >= 3 && workoutDays <= 4 && '🔥 The sweet spot. Enough volume for serious gains.'}
-                  {workoutDays >= 5 && workoutDays <= 6 && '💪 Advanced territory. Make sure you recover properly.'}
-                  {workoutDays === 7 && '⚡ Full warrior mode. Rest days are built into your protocol.'}
+              <div className="mt-8 pt-6 border-t border-outline-variant/10 relative z-10">
+                <p className="text-xs text-on-surface-variant text-center font-bold">
+                  {workoutDays.length === 0 && 'Select at least one day to continue.'}
+                  {workoutDays.length > 0 && workoutDays.length <= 2 && '💡 Great for beginners. Quality over quantity.'}
+                  {workoutDays.length >= 3 && workoutDays.length <= 4 && '🔥 The sweet spot. Enough volume for serious gains.'}
+                  {workoutDays.length >= 5 && workoutDays.length <= 6 && '💪 Advanced territory. Make sure you recover properly.'}
+                  {workoutDays.length === 7 && '⚡ Full warrior mode. Rest days are built into your protocol.'}
                 </p>
               </div>
             </div>
@@ -651,8 +657,8 @@ export default function OnboardingFlow() {
                 <span className="text-sm font-headline font-black text-primary">{targetWeight} kg</span>
               </div>
               <div className="flex justify-between py-1">
-                <span className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Days/Week</span>
-                <span className="text-sm font-headline font-black text-on-surface">{workoutDays}</span>
+                <span className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Training Days</span>
+                <span className="text-sm font-headline font-black text-on-surface">{workoutDays.join(', ')}</span>
               </div>
               <div className="flex justify-between py-1 mt-2 pt-2 border-t border-outline-variant/5">
                 <span className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Time</span>

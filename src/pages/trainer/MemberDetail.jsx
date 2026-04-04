@@ -1,12 +1,12 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 
 const memberData = {
-  '1': { name: 'Sienna Williams', risk: 'high', consistency: 22, goal: 'Weight Loss', joined: 'Jan 15, 2025', lastVisit: '21 days ago', streak: 0, sessions: 8, missedDays: 21 },
-  '2': { name: 'Marcus Thorne', risk: 'high', consistency: 35, goal: 'Build Muscle', joined: 'Nov 3, 2024', lastVisit: '14 days ago', streak: 0, sessions: 24, missedDays: 14 },
-  '3': { name: 'Elena Rodriguez', risk: 'medium', consistency: 58, goal: 'General Health', joined: 'Dec 20, 2024', lastVisit: '5 days ago', streak: 2, sessions: 18, missedDays: 5 },
-  '4': { name: 'David Chen', risk: 'medium', consistency: 62, goal: 'Build Muscle', joined: 'Feb 1, 2025', lastVisit: '3 days ago', streak: 3, sessions: 12, missedDays: 3 },
-  '5': { name: 'Priya Sharma', risk: 'medium', consistency: 65, goal: 'Stamina', joined: 'Jan 10, 2025', lastVisit: '4 days ago', streak: 1, sessions: 15, missedDays: 4 },
+  '1': { name: 'Sienna Williams', risk: 'high', exp: 'Beginner', consistency: 22, goal: 'Weight Loss', joined: 'Jan 15, 2025', lastVisit: '21 days ago', streak: 0, sessions: 8, missedDays: 21, identityGoal: 'I want to be a healthy, energetic role model for my kids.' },
+  '2': { name: 'Marcus Thorne', risk: 'high', exp: 'Experienced', consistency: 35, goal: 'Build Muscle', joined: 'Nov 3, 2024', lastVisit: '14 days ago', streak: 0, sessions: 24, missedDays: 14, identityGoal: 'I am a powerhouse who consistently builds strength.' },
+  '3': { name: 'Elena Rodriguez', risk: 'medium', exp: 'Intermediate', consistency: 58, goal: 'General Health', joined: 'Dec 20, 2024', lastVisit: '5 days ago', streak: 2, sessions: 18, missedDays: 5, identityGoal: 'I want to feel limitless and capable in my daily life.' },
+  '4': { name: 'David Chen', risk: 'medium', exp: 'Intermediate', consistency: 62, goal: 'Build Muscle', joined: 'Feb 1, 2025', lastVisit: '3 days ago', streak: 3, sessions: 12, missedDays: 3, identityGoal: 'I am an athlete building my ultimate physique.' },
+  '5': { name: 'Priya Sharma', risk: 'medium', exp: 'Beginner', consistency: 65, goal: 'Stamina', joined: 'Jan 10, 2025', lastVisit: '4 days ago', streak: 1, sessions: 15, missedDays: 4, identityGoal: 'I am a runner who embraces endurance.' },
 }
 
 const timeline = [
@@ -20,9 +20,10 @@ const timeline = [
 
 export default function MemberDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [noteText, setNoteText] = useState('')
   const [showNote, setShowNote] = useState(false)
-  const member = memberData[id] || { name: 'Unknown Member', risk: 'low', consistency: 0, goal: '-', joined: '-', lastVisit: '-', streak: 0, sessions: 0, missedDays: 0 }
+  const member = memberData[id] || { name: 'Unknown Member', risk: 'low', exp: 'Unknown', consistency: 0, goal: '-', joined: '-', lastVisit: '-', streak: 0, sessions: 0, missedDays: 0 }
 
   const riskColors = { high: 'text-error bg-error/10 border-error/20', medium: 'text-secondary bg-secondary/10 border-secondary/20', low: 'text-primary bg-primary/10 border-primary/20' }
 
@@ -46,7 +47,12 @@ export default function MemberDetail() {
               <h2 className="font-headline text-2xl font-bold">{member.name}</h2>
               <span className={`text-[10px] font-black px-2 py-1 rounded uppercase tracking-tighter ${riskColors[member.risk]}`}>{member.risk} Risk</span>
             </div>
-            <p className="text-on-surface-variant text-sm">{member.goal} · Joined {member.joined}</p>
+            <p className="text-on-surface-variant text-sm">{member.goal} · {member.exp} · Joined {member.joined}</p>
+            {member.identityGoal && (
+               <div className="mt-2 bg-surface p-3 rounded-lg border border-outline-variant/10 text-xs text-on-surface italic shadow-sm">
+                  "{member.identityGoal}"
+               </div>
+            )}
           </div>
         </div>
       </div>
@@ -73,7 +79,11 @@ export default function MemberDetail() {
 
       {/* Action Buttons */}
       <div className="grid grid-cols-2 gap-3">
-        <button className="kinetic-gradient text-on-primary-fixed font-bold py-3 rounded-xl text-sm uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2">
+        <button 
+          type="button"
+          onClick={(e) => { e.preventDefault(); navigate(`/trainer/messages/${id}`); }}
+          className="kinetic-gradient text-on-primary-fixed font-bold py-3 rounded-xl text-sm uppercase tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2"
+        >
           <span className="material-symbols-outlined text-sm">send</span>
           Send Message
         </button>

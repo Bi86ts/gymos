@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 export default function TrainerChat() {
   const navigate = useNavigate()
   const [messages, setMessages] = useState([
-    { id: 1, text: "Hey Alex! Checked your recent numbers. The deadlift form is looking much better. Feeling any lower back tension?", sender: "trainer", time: "10:30 AM", read: true },
+    { id: 1, text: "Hey Alex! Checked your recent numbers. You're really building that powerhouse identity we talked about. Deadlift form is looking much better. Feeling any lower back tension?", sender: "trainer", time: "10:30 AM", read: true },
     { id: 2, text: "Not at all, the cue you gave me about engaging lats helped a ton.", sender: "user", time: "10:35 AM", read: true },
     { id: 3, text: "Boom. That's what I like to hear. We're upping the load by 5% next week. Let me know if tomorrow's recovery feels too light.", sender: "trainer", time: "11:00 AM", read: true }
   ])

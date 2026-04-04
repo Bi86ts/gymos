@@ -14,62 +14,36 @@
       theme: {
         extend: {
           colors: {
-            "inverse-surface": "#f9f9fd",
-            "inverse-on-surface": "#535559",
-            "primary-container": "#cafd00",
-            "on-secondary-fixed-variant": "#605e00",
-            "on-error": "#450900",
-            "error": "#ff7351",
-            "on-primary-fixed-variant": "#526900",
-            "surface-tint": "#f3ffca",
-            "surface-container-highest": "#23262a",
-            "tertiary-fixed-dim": "#edd13a",
-            "primary-fixed": "#cafd00",
-            "tertiary-fixed": "#fce047",
-            "error-dim": "#d53d18",
-            "on-tertiary-fixed-variant": "#685900",
-            "surface-variant": "#23262a",
-            "primary-dim": "#beee00",
-            "error-container": "#b92902",
-            "outline": "#747579",
-            "inverse-primary": "#516700",
-            "secondary-dim": "#ddda49",
-            "surface": "#0c0e11",
-            "secondary-fixed": "#ece856",
-            "secondary": "#ece856",
-            "on-primary-fixed": "#3a4a00",
+            "surface": "#000000",
+            "surface-dim": "#121212",
+            "surface-bright": "#1C1C1E",
             "surface-container-lowest": "#000000",
-            "tertiary-dim": "#edd13a",
-            "surface-container-low": "#111417",
-            "on-secondary": "#565400",
-            "secondary-fixed-dim": "#ddda49",
-            "surface-dim": "#0c0e11",
-            "on-primary-container": "#4a5e00",
-            "primary": "#f3ffca",
-            "on-tertiary-container": "#5d5000",
-            "background": "#0c0e11",
-            "tertiary": "#ffeea5",
-            "on-surface-variant": "#aaabaf",
-            "on-primary": "#516700",
-            "on-tertiary-fixed": "#483d00",
-            "secondary-container": "#636100",
-            "primary-fixed-dim": "#beee00",
-            "on-surface": "#f9f9fd",
-            "on-background": "#f9f9fd",
-            "surface-bright": "#292c31",
-            "surface-container": "#171a1d",
-            "tertiary-container": "#fce047",
-            "on-secondary-container": "#fffca4",
-            "on-error-container": "#ffd2c8",
-            "outline-variant": "#46484b",
-            "on-tertiary": "#665800",
-            "surface-container-high": "#1d2024",
-            "on-secondary-fixed": "#434100"
+            "surface-container-low": "#121212",
+            "surface-container": "#1C1C1E",
+            "surface-container-high": "#2C2C2E",
+            "surface-container-highest": "#3A3A3C",
+            "surface-variant": "#1C1C1E",
+            "on-surface": "#FFFFFF",
+            "on-surface-variant": "#EBEBF5",
+            "primary": "#FF5E00",
+            "primary-dim": "#FF4500",
+            "primary-container": "#FF5E00",
+            "on-primary": "#FFFFFF",
+            "on-primary-container": "#FFFFFF",
+            "inverse-primary": "#FF8A3D",
+            "secondary": "#0A84FF",
+            "secondary-dim": "#007AFF",
+            "error": "#FF453A",
+            "error-dim": "#FF3B30",
+            "outline": "#38383A",
+            "outline-variant": "#2C2C2E",
+            "inverse-surface": "#F2F2F7",
+            "inverse-on-surface": "#1C1C1E",
           },
           fontFamily: {
-            "headline": ["Space Grotesk"],
-            "body": ["Inter"],
-            "label": ["Inter"]
+            "headline": ["-apple-system", "BlinkMacSystemFont", "Inter", "sans-serif"],
+            "body": ["-apple-system", "BlinkMacSystemFont", "Inter", "sans-serif"],
+            "label": ["-apple-system", "BlinkMacSystemFont", "Inter", "sans-serif"]
           },
           borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
         },
@@ -81,13 +55,13 @@
       font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
     }
     .performance-ring { transform: rotate(-90deg); }
-    .glass-effect { background: rgba(41, 44, 49, 0.6); backdrop-filter: blur(20px); }
-    .kinetic-gradient { background: linear-gradient(135deg, #f3ffca 0%, #cafd00 100%); }
-    body { background-color: #0c0e11; color: #f9f9fd; font-family: 'Inter', sans-serif; }
+    .glass-effect { background: rgba(28, 28, 30, 0.4); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
+    .kinetic-gradient { background: linear-gradient(135deg, #FF8A3D 0%, #FF5E00 100%); }
+    body { background-color: #000000; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; font-feature-settings: "cv02", "cv03", "cv04", "cv11"; }
     ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: #0c0e11; }
-    ::-webkit-scrollbar-thumb { background: #23262a; border-radius: 10px; }
-    * { scrollbar-width: thin; scrollbar-color: #23262a #0c0e11; }
+    ::-webkit-scrollbar-track { background: #000000; }
+    ::-webkit-scrollbar-thumb { background: #2C2C2E; border-radius: 10px; }
+    * { scrollbar-width: thin; scrollbar-color: #2C2C2E #000000; }
   </style>
 </head>
 <body class="bg-surface text-on-surface font-body selection:bg-primary selection:text-on-primary antialiased">

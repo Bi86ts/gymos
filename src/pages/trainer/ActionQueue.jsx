@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 const urgentMembers = [
   { id: '1', name: 'Sienna Williams', issue: '80% attendance decay (21 days)', risk: 'High Risk', action: 'Send Message' },
@@ -20,10 +20,13 @@ const quickActions = [
 ]
 
 export default function ActionQueue() {
+  const navigate = useNavigate()
   const [sentMessages, setSentMessages] = useState({})
 
-  const handleSend = (id) => {
-    setSentMessages(prev => ({ ...prev, [id]: true }))
+  const handleSend = (e, id, templatePreset) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate(`/trainer/messages/${id}?preset=${templatePreset}`)
   }
 
   return (
@@ -90,7 +93,8 @@ export default function ActionQueue() {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => handleSend(member.id)}
+                  type="button"
+                  onClick={(e) => handleSend(e, member.id, 'urgent')}
                   className={`flex-1 font-bold py-3 rounded-xl text-xs uppercase tracking-widest active:scale-95 transition-all ${
                     sentMessages[member.id]
                       ? 'bg-surface-container-highest text-primary'
@@ -128,8 +132,8 @@ export default function ActionQueue() {
                   <Link to={`/trainer/member/${member.id}`} className="font-headline text-md font-bold text-on-surface hover:text-primary transition-colors">{member.name}</Link>
                   <p className="font-body text-[10px] text-on-surface-variant">{member.issue}</p>
                 </div>
-                <button onClick={() => handleSend(member.id)} className="text-secondary p-2 rounded-full hover:bg-secondary/10 transition-colors">
-                  <span className="material-symbols-outlined">{sentMessages[member.id] ? 'check_circle' : 'send'}</span>
+                <button type="button" onClick={(e) => handleSend(e, member.id, 'medium')} className="text-secondary p-2 rounded-full hover:bg-secondary/10 transition-colors">
+                  <span className="material-symbols-outlined">send</span>
                 </button>
               </div>
             </div>

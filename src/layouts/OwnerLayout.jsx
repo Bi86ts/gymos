@@ -1,4 +1,5 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import { motion } from 'framer-motion'
 
 const navItems = [
   { path: '/owner', icon: 'dashboard', label: 'Dashboard', exact: true },
@@ -14,9 +15,9 @@ export default function OwnerLayout() {
   return (
     <div className="min-h-screen pb-24 md:pb-0">
       {/* TopAppBar */}
-      <header className="w-full top-0 sticky z-50 bg-surface flex justify-between items-center px-6 py-4">
+      <header className="w-full top-0 sticky z-50 bg-black/60 backdrop-blur-2xl flex justify-between items-center px-6 py-4 border-b border-white/5 shadow-sm">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-black italic tracking-tighter text-primary font-headline">GYMOS</h1>
+          <h1 className="text-xl font-bold tracking-tight text-white font-headline uppercase">GYMOS<span className="text-primary">.</span></h1>
         </div>
         <div className="flex items-center gap-4">
           <div className="hidden md:flex items-center gap-6 mr-6">
@@ -29,7 +30,7 @@ export default function OwnerLayout() {
                   key={item.path}
                   to={item.path}
                   className={`font-label text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                    isActive ? 'text-primary' : 'text-on-surface-variant hover:text-primary'
+                    isActive ? 'text-primary' : 'text-on-surface-variant hover:text-white'
                   }`}
                 >
                   {item.label}
@@ -37,8 +38,8 @@ export default function OwnerLayout() {
               )
             })}
           </div>
-          <div className="w-10 h-10 rounded-full border-2 border-primary/20 overflow-hidden">
-            <div className="w-full h-full bg-surface-container-highest flex items-center justify-center">
+          <div className="w-10 h-10 rounded-full border border-primary/30 overflow-hidden">
+            <div className="w-full h-full bg-surface-container flex items-center justify-center">
               <span className="material-symbols-outlined text-primary text-sm">person</span>
             </div>
           </div>
@@ -51,7 +52,7 @@ export default function OwnerLayout() {
       </main>
 
       {/* Mobile BottomNavBar */}
-      <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-2 bg-surface-bright/60 backdrop-blur-xl z-50 rounded-t-xl border-t border-primary/10 shadow-[0_-4px_24px_rgba(0,0,0,0.4)] md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 flex justify-around items-center px-2 pb-8 pt-2 bg-black/60 backdrop-blur-3xl z-50 border-t border-white/10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] md:hidden">
         {navItems.map((item) => {
           const isActive = item.exact
             ? location.pathname === item.path
@@ -60,14 +61,20 @@ export default function OwnerLayout() {
             <NavLink
               key={item.path}
               to={item.path}
-              className={`flex flex-col items-center justify-center px-4 py-2 rounded-xl transition-all duration-300 ${
-                isActive
-                  ? 'text-primary bg-primary/10 scale-110'
-                  : 'text-on-surface-variant hover:text-primary'
-              }`}
+              className="relative flex flex-col items-center justify-center w-14 h-14 rounded-2xl outline-none"
             >
-              <span className="material-symbols-outlined" style={isActive ? {fontVariationSettings: "'FILL' 1"} : {}}>{item.icon}</span>
-              <span className="font-label text-[10px] font-bold uppercase tracking-widest mt-1">{item.label}</span>
+              {isActive && (
+                <motion.div
+                  layoutId="owner-nav-indicator"
+                  className="absolute inset-0 bg-primary/10 rounded-2xl"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+              <div className={`relative z-10 flex flex-col items-center justify-center transition-colors duration-300 ${isActive ? 'text-primary' : 'text-on-surface-variant/70 hover:text-white'}`}>
+                <span className="material-symbols-outlined transition-transform duration-300 active:scale-75" style={isActive ? {fontVariationSettings: "'FILL' 1", transform: 'scale(1.15)'} : {}}>{item.icon}</span>
+                <span className="font-label text-[9px] font-semibold mt-1 tracking-wide">{item.label}</span>
+              </div>
             </NavLink>
           )
         })}
