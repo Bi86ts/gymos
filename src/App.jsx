@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import RoleSelector from './pages/RoleSelector'
+import LandingPage from './pages/LandingPage'
 import OnboardingFlow from './pages/member/OnboardingFlow'
 import MemberLayout from './layouts/MemberLayout'
 import MemberHome from './pages/member/MemberHome'
@@ -11,6 +12,9 @@ import TrainerChat from './pages/member/TrainerChat'
 import MessageHub from './pages/member/MessageHub'
 import MemberProfile from './pages/member/MemberProfile'
 import RenewalScreen from './pages/member/RenewalScreen'
+import ExerciseLibrary from './pages/member/ExerciseLibrary'
+import MuscleSelector from './pages/member/MuscleSelector'
+import WorkoutPlanView from './pages/member/WorkoutPlanView'
 
 import TrainerLayout from './layouts/TrainerLayout'
 import ActionQueue from './pages/trainer/ActionQueue'
@@ -32,13 +36,16 @@ import TrainerMessageDetail from './pages/trainer/TrainerMessageDetail'
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<RoleSelector />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/onboarding" element={<OnboardingFlow />} />
 
       {/* Member Routes */}
       <Route path="/member" element={<MemberLayout />}>
         <Route index element={<MemberHome />} />
         <Route path="plan" element={<WeeklyPlan />} />
+        <Route path="muscle-select" element={<MuscleSelector />} />
+        <Route path="exercises" element={<ExerciseLibrary />} />
+        <Route path="workout-plan" element={<WorkoutPlanView />} />
         <Route path="chat" element={<MessageHub />} />
         <Route path="profile" element={<MemberProfile />} />
       </Route>

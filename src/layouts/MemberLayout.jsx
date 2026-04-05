@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 
 const navItems = [
   { path: '/member', icon: 'fitness_center', label: 'Training', exact: true },
+  { path: '/member/muscle-select', icon: 'explore', label: 'Explore' },
   { path: '/member/plan', icon: 'calendar_month', label: 'Plan' },
   { path: '/member/chat', icon: 'forum', label: 'Chat', badge: true },
   { path: '/member/profile', icon: 'person', label: 'Profile' },

@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GymOS | Kinetic Forge</title>
-  <meta name="description" content="GymOS - A gym retention and operating system. Predict, Intervene, Retain, Renew." />
+  <meta name="description" content="GymOS - The operating system for modern gyms. AI workouts, retention tools, business intelligence." />
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <script>
     tailwind.config = {
@@ -14,36 +14,37 @@
       theme: {
         extend: {
           colors: {
-            "surface": "#000000",
-            "surface-dim": "#121212",
-            "surface-bright": "#1C1C1E",
-            "surface-container-lowest": "#000000",
-            "surface-container-low": "#121212",
-            "surface-container": "#1C1C1E",
-            "surface-container-high": "#2C2C2E",
-            "surface-container-highest": "#3A3A3C",
-            "surface-variant": "#1C1C1E",
-            "on-surface": "#FFFFFF",
-            "on-surface-variant": "#EBEBF5",
-            "primary": "#FF5E00",
-            "primary-dim": "#FF4500",
-            "primary-container": "#FF5E00",
-            "on-primary": "#FFFFFF",
-            "on-primary-container": "#FFFFFF",
-            "inverse-primary": "#FF8A3D",
-            "secondary": "#0A84FF",
-            "secondary-dim": "#007AFF",
-            "error": "#FF453A",
-            "error-dim": "#FF3B30",
-            "outline": "#38383A",
-            "outline-variant": "#2C2C2E",
-            "inverse-surface": "#F2F2F7",
-            "inverse-on-surface": "#1C1C1E",
+            "surface": "#06060B",
+            "surface-dim": "#0C0C14",
+            "surface-bright": "#16161F",
+            "surface-container-lowest": "#06060B",
+            "surface-container-low": "#0C0C14",
+            "surface-container": "#12121B",
+            "surface-container-high": "#1C1C28",
+            "surface-container-highest": "#272733",
+            "surface-variant": "#12121B",
+            "on-surface": "#F0F0F5",
+            "on-surface-variant": "#8888A0",
+            "primary": "#C8FF00",
+            "primary-dim": "#A8D600",
+            "primary-container": "#1A2600",
+            "on-primary": "#0A0A00",
+            "on-primary-fixed": "#0A0A00",
+            "on-primary-container": "#C8FF00",
+            "inverse-primary": "#6B8700",
+            "secondary": "#00D4FF",
+            "secondary-dim": "#00B8E0",
+            "error": "#FF4757",
+            "error-dim": "#E63946",
+            "outline": "#2A2A3A",
+            "outline-variant": "#1E1E2E",
+            "inverse-surface": "#F0F0F5",
+            "inverse-on-surface": "#12121B",
           },
           fontFamily: {
-            "headline": ["-apple-system", "BlinkMacSystemFont", "Inter", "sans-serif"],
-            "body": ["-apple-system", "BlinkMacSystemFont", "Inter", "sans-serif"],
-            "label": ["-apple-system", "BlinkMacSystemFont", "Inter", "sans-serif"]
+            "headline": ["Oswald", "sans-serif"],
+            "body": ["Inter", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+            "label": ["Inter", "-apple-system", "BlinkMacSystemFont", "sans-serif"]
           },
           borderRadius: { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" },
         },
@@ -55,13 +56,42 @@
       font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
     }
     .performance-ring { transform: rotate(-90deg); }
-    .glass-effect { background: rgba(28, 28, 30, 0.4); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
-    .kinetic-gradient { background: linear-gradient(135deg, #FF8A3D 0%, #FF5E00 100%); }
-    body { background-color: #000000; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif; font-feature-settings: "cv02", "cv03", "cv04", "cv11"; }
+    .glass-effect { background: rgba(18, 18, 27, 0.6); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); }
+    .kinetic-gradient { background: linear-gradient(135deg, #D4FF1A 0%, #C8FF00 100%); }
+
+    body { background-color: #06060B; color: #F0F0F5; font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif; font-feature-settings: "cv02", "cv03", "cv04", "cv11"; }
     ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: #000000; }
-    ::-webkit-scrollbar-thumb { background: #2C2C2E; border-radius: 10px; }
-    * { scrollbar-width: thin; scrollbar-color: #2C2C2E #000000; }
+    ::-webkit-scrollbar-track { background: #06060B; }
+    ::-webkit-scrollbar-thumb { background: #272733; border-radius: 10px; }
+    * { scrollbar-width: thin; scrollbar-color: #272733 #06060B; }
+
+    /* Glow Orb Animations */
+    @keyframes glow-float {
+      0%, 100% { transform: translateY(0) scale(1); opacity: 1; }
+      33% { transform: translateY(-20px) scale(1.05); opacity: 0.8; }
+      66% { transform: translateY(10px) scale(0.97); opacity: 1; }
+    }
+    .animate-glow-float { animation: glow-float 8s ease-in-out infinite; }
+
+    /* Card hover micro-interaction */
+    .card-hover { transition: transform 0.3s cubic-bezier(0.25,0.1,0.25,1), box-shadow 0.3s ease; }
+    .card-hover:hover { transform: translateY(-3px) scale(1.01); box-shadow: 0 12px 40px rgba(200,255,0,0.07), 0 4px 12px rgba(0,0,0,0.4); }
+    .card-hover:active { transform: translateY(0) scale(0.98); }
+
+    /* Skeleton loading pulse */
+    @keyframes skeleton-pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.8; }
+    }
+    .skeleton-pulse { animation: skeleton-pulse 1.5s ease-in-out infinite; }
+
+    /* Muscle selection label animation */
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translate(-50%, -8px); }
+      10% { opacity: 1; transform: translate(-50%, 0); }
+      80% { opacity: 1; transform: translate(-50%, 0); }
+      100% { opacity: 0; transform: translate(-50%, -8px); }
+    }
   </style>
 </head>
 <body class="bg-surface text-on-surface font-body selection:bg-primary selection:text-on-primary antialiased">

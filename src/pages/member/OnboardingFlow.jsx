@@ -1,708 +1,488 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 
+const TOTAL_STEPS = 6
+
+const slideIn = {
+  initial: { opacity: 0, x: 60 },
+  animate: { opacity: 1, x: 0, transition: { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] } },
+  exit: { opacity: 0, x: -60, transition: { duration: 0.25 } },
+}
+
+// ─── Reusable UI Pieces ─────────────────────────────
+function StepHeader({ title, sub }) {
+  return (
+    <div className="mb-6">
+      <h1 className="text-3xl md:text-4xl font-headline font-bold text-on-surface uppercase tracking-tight leading-tight">{title}</h1>
+      <p className="text-on-surface-variant text-sm mt-2">{sub}</p>
+    </div>
+  )
+}
+
+function FieldCard({ icon, label, children, className = '' }) {
+  return (
+    <div className={`bg-surface-container rounded-2xl p-5 border border-outline-variant/10 group focus-within:border-primary/40 transition-colors ${className}`}>
+      <label className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-3">
+        <span className="material-symbols-outlined text-primary text-sm" style={{fontVariationSettings: "'FILL' 1"}}>{icon}</span>
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+function NumInput({ value, onChange, placeholder, unit }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <input type="number" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        className="bg-transparent text-3xl font-headline font-bold text-on-surface outline-none w-full placeholder:text-surface-container-highest" />
+      <span className="text-lg text-on-surface-variant font-bold">{unit}</span>
+    </div>
+  )
+}
+
+function OptionGrid({ options, selected, onSelect, columns = 3 }) {
+  return (
+    <div className={`grid gap-2`} style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+      {options.map(opt => {
+        const isActive = selected === opt.id
+        return (
+          <button key={opt.id} onClick={() => onSelect(opt.id)}
+            className={`flex flex-col items-center p-4 rounded-xl border-2 transition-all text-center ${
+              isActive ? 'border-primary bg-primary/10 shadow-md shadow-primary/10' : 'border-outline-variant/15 bg-surface-container-low hover:border-primary/30'
+            }`}>
+            {opt.icon && <span className={`material-symbols-outlined text-2xl mb-1.5 ${isActive ? 'text-primary' : 'text-on-surface-variant'}`}
+              style={{fontVariationSettings: "'FILL' 1"}}>{opt.icon}</span>}
+            <span className={`text-xs font-bold ${isActive ? 'text-primary' : 'text-on-surface'}`}>{opt.label}</span>
+            {opt.sub && <span className="text-[9px] text-on-surface-variant mt-0.5">{opt.sub}</span>}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function ChipSelect({ items, selected, onToggle, exclusive = false }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {items.map(item => {
+        const isActive = selected.includes(item)
+        return (
+          <button key={item} onClick={() => onToggle(item)}
+            className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-all ${
+              isActive ? 'bg-primary/15 border-primary text-primary' : 'bg-surface-container-high border-outline-variant/15 text-on-surface-variant hover:border-primary/30'
+            }`}>
+            {item}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Big Card Selector (for objectives) ─────────────
+function BigCardSelect({ options, selected, onSelect }) {
+  return (
+    <div className="space-y-3">
+      {options.map(opt => {
+        const isActive = selected === opt.id
+        return (
+          <button key={opt.id} onClick={() => onSelect(opt.id)}
+            className={`w-full text-left p-5 rounded-2xl border-2 transition-all group relative overflow-hidden ${
+              isActive ? 'border-primary bg-primary/8 shadow-lg shadow-primary/10' : 'border-outline-variant/15 bg-surface-container-low hover:border-primary/30'
+            }`}>
+            <div className="flex items-center gap-4">
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${isActive ? 'bg-primary/20' : 'bg-surface-container-highest'} transition-colors`}>
+                <span className={`material-symbols-outlined text-3xl ${isActive ? 'text-primary' : 'text-on-surface-variant'}`}
+                  style={{fontVariationSettings: "'FILL' 1"}}>{opt.icon}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-headline font-bold text-on-surface text-xl uppercase tracking-tight">{opt.label}</div>
+                <div className="text-xs text-on-surface-variant mt-0.5">{opt.desc}</div>
+              </div>
+              {isActive && <span className="material-symbols-outlined text-primary text-2xl shrink-0" style={{fontVariationSettings: "'FILL' 1"}}>check_circle</span>}
+            </div>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
 export default function OnboardingFlow() {
   const [step, setStep] = useState(1)
-  const [name, setName] = useState('')
-  const [weight, setWeight] = useState('')
-  const [targetWeight, setTargetWeight] = useState('')
-  const [height, setHeight] = useState('')
-  const [age, setAge] = useState('')
-  const [objective, setObjective] = useState('')
-  const [experience, setExperience] = useState('')
-  const [motivation, setMotivation] = useState('')
-  const [limitations, setLimitations] = useState([])
-  const [limitationDetails, setLimitationDetails] = useState('')
-  const [conditions, setConditions] = useState([])
-  const [conditionDetails, setConditionDetails] = useState('')
-  const [workoutDays, setWorkoutDays] = useState([])
-  const [workoutTime, setWorkoutTime] = useState('')
-  const [selectedPackage, setSelectedPackage] = useState('basic')
-  const [selectedDuration, setSelectedDuration] = useState(3)
-  const [paymentInitiated, setPaymentInitiated] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const navigate = useNavigate()
 
+  // Step 1: Basic
+  const [name, setName] = useState('')
+  const [gender, setGender] = useState('')
+  const [age, setAge] = useState('')
+
+  // Step 2: Body
+  const [weight, setWeight] = useState('')
+  const [height, setHeight] = useState('')
+  const [bodyFat, setBodyFat] = useState('')
+  const [targetWeight, setTargetWeight] = useState('')
+
+  // Step 3: Goals
+  const [objective, setObjective] = useState('')
+  const [experience, setExperience] = useState('')
+  const [focusAreas, setFocusAreas] = useState([])
+
+  // Step 4: Health
+  const [limitations, setLimitations] = useState([])
+  const [conditions, setConditions] = useState([])
+  const [healthNotes, setHealthNotes] = useState('')
+
+  // Step 5: Lifestyle
+  const [workoutDays, setWorkoutDays] = useState([])
+  const [workoutTime, setWorkoutTime] = useState('')
+  const [sessionLength, setSessionLength] = useState('')
+  const [equipment, setEquipment] = useState('')
+
+  // Step 6: Diet & Recovery
+  const [diet, setDiet] = useState('')
+  const [sleepHours, setSleepHours] = useState('')
+  const [waterIntake, setWaterIntake] = useState('')
+  const [motivation, setMotivation] = useState('')
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const canProceed = useMemo(() => {
+    switch (step) {
+      case 1: return name && gender && age
+      case 2: return weight && height && targetWeight
+      case 3: return objective && experience
+      case 4: return limitations.length > 0 && conditions.length > 0
+      case 5: return workoutDays.length > 0 && workoutTime && sessionLength && equipment
+      case 6: return diet
+      default: return false
+    }
+  }, [step, name, gender, age, weight, height, targetWeight, objective, experience, limitations, conditions, workoutDays, workoutTime, sessionLength, equipment, diet])
+
   const handleNext = () => {
-    if (step === 1 && (!name || !weight || !height || !age)) return
-    if (step === 2 && (!objective || !experience || limitations.length === 0 || conditions.length === 0)) return
-    if (step === 3 && (!workoutTime || !targetWeight)) return
-    if (step === 4 && (!selectedPackage || !selectedDuration)) return
-
-    if (step === 4 && !paymentInitiated) {
-      handlePayment()
-      return
-    }
-
-    if (step < 4) {
-      setStep(s => s + 1)
-    } else {
-      finishOnboarding()
-    }
+    if (!canProceed) return
+    if (step < TOTAL_STEPS) setStep(s => s + 1)
+    else finishOnboarding()
   }
 
-  const handlePayment = () => {
-    const upiId = 'brajrajchaturvedi28@okhdfcbank'
-    const amount = getPricing()
-    const upiUrl = `upi://pay?pa=${upiId}&pn=GymOS&am=${amount}&cu=INR`
-    
-    // Attempt to open UPI app
-    window.location.href = upiUrl
-    
-    // Change UI state to wait for payment completion
-    setPaymentInitiated(true)
-  }
+  const handleBack = () => step > 1 ? setStep(s => s - 1) : navigate(-1)
 
-  const handleBack = () => {
-    if (step > 1) setStep(s => s - 1)
-    else navigate(-1)
+  const toggleList = (list, setList, item, noneValue) => {
+    if (item === noneValue) { setList([item]); return }
+    let next = list.includes(noneValue) ? [] : [...list]
+    next = next.includes(item) ? next.filter(i => i !== item) : [...next, item]
+    setList(next)
   }
 
   const finishOnboarding = () => {
     setIsSubmitting(true)
     setTimeout(() => {
-      setIsSubmitting(false)
       const data = {
-        name,
-        weight,
-        height,
-        age,
-        objective: objective.charAt(0).toUpperCase() + objective.slice(1),
-        targetWeight,
-        workoutTime,
-        workoutDays,
-        limitations,
-        limitationDetails,
-        conditions,
-        conditionDetails,
-        package: selectedPackage,
-        duration: selectedDuration,
-        experience,
-        motivation
+        name, gender, age: Number(age),
+        weight: Number(weight), height: Number(height), bodyFat: bodyFat ? Number(bodyFat) : null,
+        targetWeight: Number(targetWeight),
+        objective, experience, focusAreas,
+        limitations, conditions, healthNotes,
+        workoutDays, workoutTime, sessionLength, equipment,
+        diet, sleepHours: sleepHours ? Number(sleepHours) : null, waterIntake, motivation,
+        onboardedAt: new Date().toISOString(),
       }
       localStorage.setItem('gymos_member', JSON.stringify(data))
-      setStep(5) // Success state
+      setIsSubmitting(false)
+      setStep(TOTAL_STEPS + 1)
     }, 1500)
   }
 
-  const goHome = () => {
-    navigate('/member')
-  }
-
-  const canProceed = () => {
-    if (step === 1) return name && weight && height && age
-    if (step === 2) return objective && experience && limitations.length > 0 && conditions.length > 0
-    if (step === 3) return workoutTime && targetWeight && workoutDays.length > 0
-    if (step === 4) return selectedPackage && selectedDuration
-    return false
-  }
-
-  const getPricing = () => {
-    const baseRate = selectedPackage === 'advanced' ? 4000 : 2000;
-    let discount = 0;
-    if (selectedDuration === 6) discount = 0.15;
-    if (selectedDuration === 12) discount = 0.25;
-    return Math.round(baseRate * selectedDuration * (1 - discount));
-  }
-
-  const toggleLimitation = (item) => {
-    if (item === "None — I'm good to go") {
-      setLimitations([item])
-      return
-    }
-    let next = limitations.includes("None — I'm good to go") ? [] : [...limitations]
-    if (next.includes(item)) {
-      next = next.filter(i => i !== item)
-    } else {
-      next.push(item)
-    }
-    setLimitations(next)
-  }
-
-  const toggleCondition = (item) => {
-    if (item === "None of the above") {
-      setConditions([item])
-      return
-    }
-    let next = conditions.includes("None of the above") ? [] : [...conditions]
-    if (next.includes(item)) {
-      next = next.filter(i => i !== item)
-    } else {
-      next.push(item)
-    }
-    setConditions(next)
-  }
-
-  const objectives = [
-    {
-      id: 'bulk',
-      icon: 'fitness_center',
-      label: 'Bulk',
-      desc: 'Maximum muscle mass & strength gains',
-      gradient: 'from-primary/20 to-primary-container/10',
-    },
-    {
-      id: 'lean',
-      icon: 'local_fire_department',
-      label: 'Lean',
-      desc: 'Shed fat, reveal definition & abs',
-      gradient: 'from-error/20 to-error/5',
-    },
-    {
-      id: 'explosive',
-      icon: 'bolt',
-      label: 'Explosive',
-      desc: 'Power, speed & athletic performance',
-      gradient: 'from-secondary/20 to-secondary/5',
-    },
-  ]
+  // Step label descriptions
+  const stepLabels = ['Basics', 'Body', 'Goals', 'Health', 'Schedule', 'Lifestyle']
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col p-6 max-w-lg mx-auto pb-8">
-      {/* Header / Progress */}
-      {step < 5 && (
-        <div className="pt-8 pb-10">
-          <div className="flex justify-between items-center mb-4">
-            <button onClick={handleBack} className="text-on-surface-variant hover:text-on-surface transition-colors">
-              <span className="material-symbols-outlined">arrow_back</span>
+    <div className="min-h-screen bg-surface flex flex-col max-w-lg mx-auto relative">
+      {/* Ambient glow */}
+      <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+
+      {/* ─── Progress Header ─── */}
+      {step <= TOTAL_STEPS && (
+        <div className="sticky top-0 z-30 bg-surface/90 backdrop-blur-xl px-6 pt-6 pb-4 border-b border-outline-variant/5">
+          <div className="flex justify-between items-center mb-3">
+            <button onClick={handleBack} className="text-on-surface-variant hover:text-primary transition-colors p-1 -ml-1">
+              <span className="material-symbols-outlined text-xl">arrow_back</span>
             </button>
-            <span className="text-primary font-bold tracking-widest uppercase text-xs">Step {step} of 4</span>
-            <div className="w-6"></div>
+            <div className="text-center">
+              <span className="text-[9px] font-black text-primary uppercase tracking-[0.25em]">{stepLabels[step - 1]}</span>
+              <p className="text-[10px] text-on-surface-variant font-bold">{step} of {TOTAL_STEPS}</p>
+            </div>
+            <div className="w-8" />
           </div>
-          <div className="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-primary to-primary-container rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${(step / 4) * 100}%` }}
-            ></div>
+          {/* Progress dots */}
+          <div className="flex gap-1.5">
+            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+              <div key={i} className={`h-1 rounded-full flex-1 transition-all duration-500 ${
+                i < step ? 'bg-primary' : i === step - 1 ? 'bg-primary' : 'bg-surface-container-highest'
+              }`} />
+            ))}
           </div>
         </div>
       )}
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col justify-center gap-8">
+      {/* ─── Content ─── */}
+      <div className="flex-1 px-6 py-6">
+        <AnimatePresence mode="wait">
 
-        {/* Step 1: Physicals */}
-        {step === 1 && (
-          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
-            <div>
-              <h1 className="text-3xl font-black font-headline text-on-surface mb-2">Tell us about yourself.</h1>
-              <p className="text-on-surface-variant text-sm">We'll use this to build your personalized protocol.</p>
-            </div>
+          {/* ═══ STEP 1: Basics ═══ */}
+          {step === 1 && (
+            <motion.div key="s1" {...slideIn} className="space-y-4">
+              <StepHeader title="Let's get to know you." sub="Basic info to personalize your experience." />
+              <FieldCard icon="person" label="Full Name">
+                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Your name"
+                  className="bg-transparent text-2xl font-headline font-bold text-on-surface outline-none w-full placeholder:text-surface-container-highest" />
+              </FieldCard>
+              <FieldCard icon="wc" label="Gender">
+                <OptionGrid columns={3} selected={gender} onSelect={setGender} options={[
+                  { id: 'male', icon: 'male', label: 'Male' },
+                  { id: 'female', icon: 'female', label: 'Female' },
+                  { id: 'other', icon: 'transgender', label: 'Other' },
+                ]} />
+              </FieldCard>
+              <FieldCard icon="cake" label="Age">
+                <NumInput value={age} onChange={setAge} placeholder="26" unit="yrs" />
+              </FieldCard>
+            </motion.div>
+          )}
 
-            <div className="space-y-4">
-              {/* Name */}
-              <div className="bg-surface-container rounded-2xl p-5 border border-outline-variant/10 group focus-within:border-primary/40 transition-colors">
-                <label className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-3">
-                  <span className="material-symbols-outlined text-primary text-sm">person</span>
-                  Full Name
-                </label>
-                <div className="flex items-baseline gap-2">
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="John Doe"
-                    className="bg-transparent text-2xl font-headline font-black text-on-surface outline-none w-full placeholder:text-surface-container-highest"
-                  />
-                </div>
+          {/* ═══ STEP 2: Body ═══ */}
+          {step === 2 && (
+            <motion.div key="s2" {...slideIn} className="space-y-4">
+              <StepHeader title="Your body metrics." sub="We'll track progress from these baselines." />
+              <div className="grid grid-cols-2 gap-3">
+                <FieldCard icon="monitor_weight" label="Current Weight">
+                  <NumInput value={weight} onChange={setWeight} placeholder="78" unit="kg" />
+                </FieldCard>
+                <FieldCard icon="height" label="Height">
+                  <NumInput value={height} onChange={setHeight} placeholder="177" unit="cm" />
+                </FieldCard>
               </div>
+              <FieldCard icon="flag" label="Target Weight">
+                <NumInput value={targetWeight} onChange={setTargetWeight} placeholder="72" unit="kg" />
+                {weight && targetWeight && (
+                  <p className="text-xs text-on-surface-variant mt-2 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-primary text-sm">trending_down</span>
+                    {Math.abs(Number(weight) - Number(targetWeight))} kg {Number(targetWeight) < Number(weight) ? 'to lose' : 'to gain'}
+                  </p>
+                )}
+              </FieldCard>
+              <FieldCard icon="percent" label="Body Fat % (optional)" className="opacity-80">
+                <NumInput value={bodyFat} onChange={setBodyFat} placeholder="18" unit="%" />
+              </FieldCard>
+            </motion.div>
+          )}
 
-              {/* Weight */}
-              <div className="bg-surface-container rounded-2xl p-5 border border-outline-variant/10 group focus-within:border-primary/40 transition-colors">
-                <label className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-3">
-                  <span className="material-symbols-outlined text-primary text-sm">monitor_weight</span>
-                  Current Weight
-                </label>
-                <div className="flex items-baseline gap-2">
-                  <input
-                    type="number"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    placeholder="78"
-                    className="bg-transparent text-3xl font-headline font-black text-on-surface outline-none w-full placeholder:text-surface-container-highest"
-                  />
-                  <span className="text-lg text-on-surface-variant font-bold">kg</span>
-                </div>
-              </div>
+          {/* ═══ STEP 3: Goals ═══ */}
+          {step === 3 && (
+            <motion.div key="s3" {...slideIn} className="space-y-5">
+              <StepHeader title="What's your mission?" sub="This shapes your entire protocol." />
+              <BigCardSelect selected={objective} onSelect={setObjective} options={[
+                { id: 'bulk', icon: 'fitness_center', label: 'Bulk', desc: 'Maximum muscle mass & strength gains' },
+                { id: 'lean', icon: 'local_fire_department', label: 'Cut / Lean', desc: 'Shed fat, reveal definition & abs' },
+                { id: 'athletic', icon: 'bolt', label: 'Athletic', desc: 'Power, speed & functional performance' },
+                { id: 'maintain', icon: 'balance', label: 'Maintain', desc: 'Stay fit, consistent training routine' },
+                { id: 'rehab', icon: 'healing', label: 'Rehab', desc: 'Recover from injury, build back strength' },
+              ]} />
 
-              {/* Height */}
-              <div className="bg-surface-container rounded-2xl p-5 border border-outline-variant/10 group focus-within:border-primary/40 transition-colors">
-                <label className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-3">
-                  <span className="material-symbols-outlined text-primary text-sm">height</span>
-                  Height
-                </label>
-                <div className="flex items-baseline gap-2">
-                  <input
-                    type="number"
-                    value={height}
-                    onChange={(e) => setHeight(e.target.value)}
-                    placeholder="177"
-                    className="bg-transparent text-3xl font-headline font-black text-on-surface outline-none w-full placeholder:text-surface-container-highest"
-                  />
-                  <span className="text-lg text-on-surface-variant font-bold">cm</span>
-                </div>
-              </div>
+              <FieldCard icon="fitness_center" label="Experience Level">
+                <OptionGrid columns={3} selected={experience} onSelect={setExperience} options={[
+                  { id: 'beginner', label: 'Beginner', sub: '< 6 months' },
+                  { id: 'intermediate', label: 'Intermediate', sub: '1-3 years' },
+                  { id: 'advanced', label: 'Advanced', sub: '3+ years' },
+                ]} />
+              </FieldCard>
 
-              {/* Age */}
-              <div className="bg-surface-container rounded-2xl p-5 border border-outline-variant/10 group focus-within:border-primary/40 transition-colors">
-                <label className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-3">
-                  <span className="material-symbols-outlined text-primary text-sm">cake</span>
-                  Age
-                </label>
-                <div className="flex items-baseline gap-2">
-                  <input
-                    type="number"
-                    value={age}
-                    onChange={(e) => setAge(e.target.value)}
-                    placeholder="26"
-                    className="bg-transparent text-3xl font-headline font-black text-on-surface outline-none w-full placeholder:text-surface-container-highest"
-                  />
-                  <span className="text-lg text-on-surface-variant font-bold">yrs</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+              <FieldCard icon="my_location" label="Focus Areas (optional)">
+                <p className="text-[10px] text-on-surface-variant mb-2">Select muscle groups you want to prioritize:</p>
+                <ChipSelect items={['Upper Body', 'Lower Body', 'Core', 'Back', 'Arms', 'Full Body']}
+                  selected={focusAreas} onToggle={area => {
+                    setFocusAreas(prev => prev.includes(area) ? prev.filter(a => a !== area) : [...prev, area])
+                  }} />
+              </FieldCard>
+            </motion.div>
+          )}
 
-        {/* Step 2: Objective */}
-        {step === 2 && (
-          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
-            <div>
-              <h1 className="text-3xl font-black font-headline text-on-surface mb-2">Choose your track.</h1>
-              <p className="text-on-surface-variant text-sm">This shapes your entire training protocol.</p>
-            </div>
-            <div className="space-y-3">
-              {objectives.map(obj => (
-                <button
-                  key={obj.id}
-                  onClick={() => setObjective(obj.id)}
-                  className={`w-full text-left p-5 rounded-2xl border-2 transition-all relative overflow-hidden group ${
-                    objective === obj.id
-                      ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10'
-                      : 'border-outline-variant/20 bg-surface-container-low hover:border-primary/50'
-                  }`}
-                >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${obj.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
-                  <div className="relative z-10 flex items-center gap-4">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
-                      objective === obj.id ? 'bg-primary/20' : 'bg-surface-container-highest'
-                    } transition-colors`}>
-                      <span className={`material-symbols-outlined text-3xl ${
-                        objective === obj.id ? 'text-primary' : 'text-on-surface-variant'
-                      }`} style={{fontVariationSettings: "'FILL' 1"}}>
-                        {obj.icon}
-                      </span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-black text-on-surface font-headline text-xl uppercase tracking-tight">{obj.label}</div>
-                      <div className="text-xs text-on-surface-variant mt-0.5">{obj.desc}</div>
-                    </div>
-                    {objective === obj.id && (
-                      <span className="material-symbols-outlined text-primary text-2xl" style={{fontVariationSettings: "'FILL' 1"}}>check_circle</span>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
+          {/* ═══ STEP 4: Health ═══ */}
+          {step === 4 && (
+            <motion.div key="s4" {...slideIn} className="space-y-5">
+              <StepHeader title="Health & safety." sub="We'll adjust your plan to keep you safe." />
 
-            {/* Experience */}
-            <div className="mt-8 bg-surface-container rounded-2xl p-5 border border-outline-variant/10">
-              <h3 className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-primary text-sm">fitness_center</span>
-                Experience Level
-              </h3>
-              <div className="flex flex-col gap-3">
-                {[
-                  { id: 'Beginner', desc: 'New to the gym or just starting out.' },
-                  { id: 'Intermediate', desc: '1-2 years of consistent lifting.' },
-                  { id: 'Experienced', desc: '3+ years of serious training.' }
-                ].map(level => (
-                  <button
-                    key={level.id}
-                    onClick={() => setExperience(level.id)}
-                    className={`w-full py-4 px-5 text-sm font-bold rounded-xl border transition-all text-left flex flex-col gap-1 ${
-                      experience === level.id 
-                        ? 'bg-primary/20 border-primary text-primary shadow-sm shadow-primary/10' 
-                        : 'bg-surface-container-low border-outline-variant/20 text-on-surface hover:border-primary/40'
-                    }`}
-                  >
-                    <span>{level.id}</span>
-                    <span className={`text-xs font-normal ${experience === level.id ? 'text-primary/90' : 'text-on-surface-variant'}`}>{level.desc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+              <FieldCard icon="healing" label="Physical Limitations">
+                <p className="text-[10px] text-on-surface-variant mb-3">Areas to protect or avoid? <span className="text-primary">Select all that apply.</span></p>
+                <ChipSelect items={['Lower Back', 'Knees', 'Shoulders', 'Wrists / Elbows', 'Neck', 'Hips', "None — all good"]}
+                  selected={limitations} onToggle={item => toggleList(limitations, setLimitations, item, "None — all good")} />
+              </FieldCard>
 
-            {/* Motivation */}
-            <div className="mt-8 bg-surface-container rounded-2xl p-5 border border-outline-variant/10 group focus-within:border-primary/40 transition-colors">
-              <h3 className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex justify-between items-center mb-1">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-sm">psychology</span>
-                  Your Identity Goal
-                </div>
-                <span className="normal-case tracking-normal opacity-70">Optional</span>
-              </h3>
-              <p className="text-on-surface-variant text-xs mb-3 leading-snug">Who do you want to become? Focus on identity, not extrinsic outcomes.</p>
-              <textarea
-                value={motivation}
-                onChange={(e) => setMotivation(e.target.value.substring(0, 100))}
-                placeholder="e.g. 'I am an athlete who trains consistently' rather than 'I want to lose 5kg'"
-                rows="3"
-                className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl p-3 text-sm text-on-surface placeholder:text-surface-container-highest focus:border-primary/50 focus:outline-none resize-none transition-colors"
-              />
-              <div className="text-right text-[10px] text-on-surface-variant border-t border-outline-variant/10 pt-2 mt-2">
-                {motivation.length}/100
-              </div>
-            </div>
+              <FieldCard icon="favorite" label="Health Conditions">
+                <p className="text-[10px] text-on-surface-variant mb-3">Anything that affects your training:</p>
+                <ChipSelect items={['Diabetes', 'High Blood Pressure', 'Heart Condition', 'Asthma', 'Thyroid', 'PCOD/PCOS', 'Anxiety/Depression', 'None']}
+                  selected={conditions} onToggle={item => toggleList(conditions, setConditions, item, 'None')} />
+              </FieldCard>
 
-            {/* Physical Limitations */}
-            <div className="mt-8 bg-surface-container rounded-2xl p-5 border border-outline-variant/10">
-              <h3 className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-1">
-                <span className="material-symbols-outlined text-primary text-sm" style={{fontVariationSettings: "'FILL' 1"}}>healing</span>
-                Physical limitations
-              </h3>
-              <p className="text-on-surface-variant text-xs mb-4">Any areas we should avoid in your training? <span className="text-primary/70">Select all that apply.</span></p>
-              <div className="flex flex-wrap gap-2">
-                {['Lower back', 'Knees', 'Shoulders', 'Wrists / Elbows', 'Neck', "None — I'm good to go"].map(item => (
-                  <button
-                    key={item}
-                    onClick={() => toggleLimitation(item)}
-                    className={`px-4 py-2 text-xs font-bold rounded-lg border transition-all ${
-                      limitations.includes(item)
-                        ? 'bg-primary/20 border-primary text-primary shadow-sm shadow-primary/10'
-                        : 'bg-surface-container-highest border-outline-variant/20 text-on-surface hover:border-primary/40'
-                    }`}
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-              
-              {limitations.length > 0 && !limitations.includes("None — I'm good to go") && (
-                <div className="mt-4 animate-in fade-in slide-in-from-top-2">
-                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 flex items-center gap-1.5"><span className="material-symbols-outlined text-xs">edit</span> Briefly describe the problem</p>
-                  <textarea
-                    value={limitationDetails}
-                    onChange={(e) => setLimitationDetails(e.target.value)}
-                    placeholder="e.g. Sharp pain in right knee when squatting deep."
-                    rows="2"
-                    className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl p-3 text-sm text-on-surface placeholder:text-surface-container-highest focus:border-primary/50 focus:outline-none resize-none transition-colors"
-                  />
-                </div>
+              {(limitations.some(l => l !== "None — all good") || conditions.some(c => c !== 'None')) && (
+                <FieldCard icon="edit_note" label="Additional Notes (optional)">
+                  <textarea value={healthNotes} onChange={e => setHealthNotes(e.target.value)} rows={3} placeholder="Any details your trainer should know..."
+                    className="w-full bg-surface-container-high border border-outline-variant/10 rounded-xl p-3 text-sm text-on-surface placeholder:text-on-surface-variant/30 focus:border-primary/40 outline-none resize-none" />
+                </FieldCard>
               )}
-            </div>
+            </motion.div>
+          )}
 
-            {/* Health Conditions */}
-            <div className="mt-8 bg-surface-container rounded-2xl p-5 border border-outline-variant/10">
-              <h3 className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-1">
-                <span className="material-symbols-outlined text-primary text-sm" style={{fontVariationSettings: "'FILL' 1"}}>favorite</span>
-                Health conditions
-              </h3>
-              <p className="text-on-surface-variant text-xs mb-4 leading-snug">Anything we should know about your health?<br/><span className="text-on-surface-variant/70 text-[10px]">This helps us personalise your diet plan and training intensity.</span></p>
-              <div className="flex flex-col gap-2">
-                {[
-                  'Diabetes (Type 1 or Type 2)',
-                  'High blood pressure',
-                  'Heart condition',
-                  'Thyroid disorder',
-                  'PCOD / PCOS',
-                  'None of the above'
-                ].map(item => (
-                  <button
-                    key={item}
-                    onClick={() => toggleCondition(item)}
-                    className={`w-full py-3 px-4 text-xs font-bold rounded-xl border transition-all text-left flex items-center gap-3 ${
-                      conditions.includes(item)
-                        ? 'bg-primary/20 border-primary text-primary shadow-sm shadow-primary/10'
-                        : 'bg-surface-container-low border-outline-variant/20 text-on-surface hover:border-primary/40'
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${conditions.includes(item) ? 'border-primary bg-primary text-on-primary-fixed' : 'border-outline-variant/50 bg-transparent'}`}>
-                      {conditions.includes(item) && <span className="material-symbols-outlined text-[10px] font-black">check</span>}
-                    </div>
-                    {item}
-                  </button>
-                ))}
-              </div>
-              
-              {conditions.length > 0 && !conditions.includes('None of the above') && (
-                <div className="mt-4 animate-in fade-in slide-in-from-top-2">
-                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2 flex items-center gap-1.5"><span className="material-symbols-outlined text-xs">edit</span> Anything else your trainer should know?</p>
-                  <textarea
-                    value={conditionDetails}
-                    onChange={(e) => setConditionDetails(e.target.value)}
-                    placeholder="e.g. 'on medication', 'doctor advised low intensity only'"
-                    rows="2"
-                    className="w-full bg-surface-container-highest border border-outline-variant/20 rounded-xl p-3 text-sm text-on-surface placeholder:text-surface-container-highest focus:border-primary/50 focus:outline-none resize-none transition-colors"
-                  />
+          {/* ═══ STEP 5: Schedule ═══ */}
+          {step === 5 && (
+            <motion.div key="s5" {...slideIn} className="space-y-5">
+              <StepHeader title="Plan your week." sub="We'll build your split around these days." />
+
+              <FieldCard icon="calendar_month" label="Training Days">
+                <div className="flex gap-2 justify-center flex-wrap">
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                    <button key={day} onClick={() => setWorkoutDays(prev => prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day])}
+                      className={`w-12 h-12 rounded-xl font-bold text-sm flex items-center justify-center transition-all ${
+                        workoutDays.includes(day) ? 'bg-primary text-on-primary scale-110 shadow-md shadow-primary/20' : 'bg-surface-container-highest text-on-surface-variant hover:bg-outline-variant/30'
+                      }`}>{day}</button>
+                  ))}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
+                {workoutDays.length > 0 && (
+                  <p className="text-xs text-on-surface-variant text-center mt-3 font-medium">
+                    {workoutDays.length} day{workoutDays.length > 1 ? 's' : ''}/week — {
+                      workoutDays.length <= 2 ? 'great for beginners' :
+                      workoutDays.length <= 4 ? 'the sweet spot for gains' :
+                      workoutDays.length <= 6 ? 'advanced territory 💪' : 'warrior mode ⚡'
+                    }
+                  </p>
+                )}
+              </FieldCard>
 
-        {/* Step 3: Commitment */}
-        {step === 3 && (
-          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 fade-in">
-            <div>
-              <h1 className="text-3xl font-black font-headline text-on-surface mb-2">Which days will you train?</h1>
-              <p className="text-on-surface-variant text-sm">Select the days you realistically plan to hit the gym.</p>
-            </div>
+              <FieldCard icon="schedule" label="Preferred Time">
+                <OptionGrid columns={3} selected={workoutTime} onSelect={setWorkoutTime} options={[
+                  { id: 'morning', icon: 'light_mode', label: 'Morning' },
+                  { id: 'afternoon', icon: 'wb_sunny', label: 'Afternoon' },
+                  { id: 'evening', icon: 'dark_mode', label: 'Evening' },
+                ]} />
+              </FieldCard>
 
-            <div className="bg-surface-container rounded-3xl p-6 relative overflow-hidden border border-outline-variant/10">
-              <div className="flex flex-wrap gap-3 justify-center relative z-10">
-                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-                  <button
-                    key={day}
-                    onClick={() => {
-                      if (workoutDays.includes(day)) {
-                        setWorkoutDays(workoutDays.filter(d => d !== day))
-                      } else {
-                        setWorkoutDays([...workoutDays, day])
-                      }
-                    }}
-                    className={`w-14 h-14 rounded-2xl font-bold flex items-center justify-center transition-all ${
-                      workoutDays.includes(day)
-                        ? 'bg-primary text-on-primary-fixed scale-110 shadow-lg shadow-primary/20'
-                        : 'bg-surface-container-highest text-on-surface hover:bg-outline-variant/30'
-                    }`}
-                  >
-                    {day}
-                  </button>
-                ))}
+              <FieldCard icon="timer" label="Session Length">
+                <OptionGrid columns={3} selected={sessionLength} onSelect={setSessionLength} options={[
+                  { id: '30', label: '30 min', sub: 'Quick' },
+                  { id: '45', label: '45 min', sub: 'Standard' },
+                  { id: '60', label: '60 min', sub: 'Full' },
+                  { id: '75', label: '75 min', sub: 'Extended' },
+                  { id: '90', label: '90 min', sub: 'Pro' },
+                  { id: '120', label: '120 min', sub: 'Beast' },
+                ]} />
+              </FieldCard>
+
+              <FieldCard icon="sports_gymnastics" label="Equipment Access">
+                <OptionGrid columns={2} selected={equipment} onSelect={setEquipment} options={[
+                  { id: 'full_gym', icon: 'fitness_center', label: 'Full Gym' },
+                  { id: 'home_basic', icon: 'home', label: 'Home (Basic)' },
+                  { id: 'home_equipped', icon: 'exercise', label: 'Home (Equipped)' },
+                  { id: 'bodyweight', icon: 'self_improvement', label: 'Bodyweight Only' },
+                ]} />
+              </FieldCard>
+            </motion.div>
+          )}
+
+          {/* ═══ STEP 6: Lifestyle ═══ */}
+          {step === 6 && (
+            <motion.div key="s6" {...slideIn} className="space-y-5">
+              <StepHeader title="Lifestyle & nutrition." sub="Fine-tune your plan with these details." />
+
+              <FieldCard icon="restaurant" label="Diet Preference">
+                <OptionGrid columns={2} selected={diet} onSelect={setDiet} options={[
+                  { id: 'no_pref', label: 'No Preference' },
+                  { id: 'vegetarian', label: 'Vegetarian' },
+                  { id: 'vegan', label: 'Vegan' },
+                  { id: 'keto', label: 'Keto' },
+                  { id: 'high_protein', label: 'High Protein' },
+                  { id: 'flexible', label: 'Flexible' },
+                ]} />
+              </FieldCard>
+
+              <div className="grid grid-cols-2 gap-3">
+                <FieldCard icon="bedtime" label="Sleep (hrs/night)">
+                  <NumInput value={sleepHours} onChange={setSleepHours} placeholder="7" unit="hrs" />
+                </FieldCard>
+                <FieldCard icon="water_drop" label="Water Intake">
+                  <OptionGrid columns={1} selected={waterIntake} onSelect={setWaterIntake} options={[
+                    { id: 'low', label: '< 2L' },
+                    { id: 'medium', label: '2-3L' },
+                    { id: 'high', label: '3L+' },
+                  ]} />
+                </FieldCard>
               </div>
-              <div className="mt-8 pt-6 border-t border-outline-variant/10 relative z-10">
-                <p className="text-xs text-on-surface-variant text-center font-bold">
-                  {workoutDays.length === 0 && 'Select at least one day to continue.'}
-                  {workoutDays.length > 0 && workoutDays.length <= 2 && '💡 Great for beginners. Quality over quantity.'}
-                  {workoutDays.length >= 3 && workoutDays.length <= 4 && '🔥 The sweet spot. Enough volume for serious gains.'}
-                  {workoutDays.length >= 5 && workoutDays.length <= 6 && '💪 Advanced territory. Make sure you recover properly.'}
-                  {workoutDays.length === 7 && '⚡ Full warrior mode. Rest days are built into your protocol.'}
-                </p>
-              </div>
-            </div>
 
-            {/* Preferred Time */}
-            <div className="bg-surface-container rounded-2xl p-5 border border-outline-variant/10">
-              <h3 className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-primary text-sm">schedule</span>
-                Preferred Workout Time
-              </h3>
-              <div className="flex gap-2">
+              <FieldCard icon="psychology" label="Motivation (optional)">
+                <p className="text-[10px] text-on-surface-variant mb-2">Who do you want to become?</p>
+                <textarea value={motivation} onChange={e => setMotivation(e.target.value.slice(0, 150))} rows={3}
+                  placeholder="e.g. 'I want to be the strongest version of myself'"
+                  className="w-full bg-surface-container-high border border-outline-variant/10 rounded-xl p-3 text-sm text-on-surface placeholder:text-on-surface-variant/30 focus:border-primary/40 outline-none resize-none" />
+                <p className="text-[9px] text-on-surface-variant/50 text-right mt-1">{motivation.length}/150</p>
+              </FieldCard>
+            </motion.div>
+          )}
+
+          {/* ═══ SUCCESS ═══ */}
+          {step === TOTAL_STEPS + 1 && (
+            <motion.div key="success" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6 }}
+              className="text-center py-12 space-y-6">
+              <div className="w-28 h-28 bg-primary/15 rounded-full mx-auto flex items-center justify-center relative">
+                <div className="absolute inset-0 bg-primary/10 rounded-full animate-ping" />
+                <span className="material-symbols-outlined text-6xl text-primary" style={{fontVariationSettings: "'FILL' 1"}}>how_to_reg</span>
+              </div>
+              <div>
+                <h1 className="text-3xl font-headline font-bold text-on-surface uppercase tracking-tight">You're In!</h1>
+                <p className="text-on-surface-variant mt-2 max-w-xs mx-auto">Profile saved. Your personalized <span className="text-primary font-bold capitalize">{objective}</span> protocol is ready.</p>
+              </div>
+
+              {/* Summary Card */}
+              <div className="bg-surface-container rounded-2xl p-5 text-left space-y-2.5 border border-outline-variant/10">
                 {[
-                  { id: 'morning', label: 'Morning', icon: 'light_mode' },
-                  { id: 'afternoon', label: 'Afternoon', icon: 'wb_sunny' },
-                  { id: 'evening', label: 'Evening', icon: 'dark_mode' }
-                ].map(time => (
-                  <button
-                    key={time.id}
-                    onClick={() => setWorkoutTime(time.id)}
-                    className={`flex-1 py-4 flex flex-col items-center gap-2 text-xs font-bold rounded-xl border transition-all ${
-                        workoutTime === time.id
-                          ? 'bg-primary/20 border-primary text-primary shadow-sm shadow-primary/10' 
-                          : 'bg-surface-container-low border-outline-variant/20 text-on-surface hover:border-primary/40'
-                      }`}
-                  >
-                    <span className={`material-symbols-outlined text-xl ${workoutTime === time.id ? 'text-primary' : 'text-on-surface-variant'}`} style={{fontVariationSettings: "'FILL' 1"}}>{time.icon}</span>
-                    {time.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Target Weight */}
-            <div className="bg-surface-container rounded-2xl p-5 border border-outline-variant/10 group focus-within:border-primary/40 transition-colors">
-              <label className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-3">
-                <span className="material-symbols-outlined text-primary text-sm">flag</span>
-                Target Body Weight
-              </label>
-              <div className="flex items-baseline gap-2">
-                <input
-                  type="number"
-                  value={targetWeight}
-                  onChange={(e) => setTargetWeight(e.target.value)}
-                  placeholder="70"
-                  className="bg-transparent text-3xl font-headline font-black text-on-surface outline-none w-full placeholder:text-surface-container-highest"
-                />
-                <span className="text-lg text-on-surface-variant font-bold">kg</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Package & Payment */}
-        {step === 4 && (
-          <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500 fade-in">
-            <div>
-              <h1 className="text-3xl font-black font-headline text-on-surface mb-2">Select your package.</h1>
-              <p className="text-on-surface-variant text-sm">Choose the level of service and commitment.</p>
-            </div>
-
-            {/* Package Selection */}
-            <div className="space-y-3">
-              <div className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-2">
-                <span className="material-symbols-outlined text-primary text-sm">fitness_center</span>
-                Service Level
-              </div>
-              {[
-                { id: 'basic', title: 'Basic Coaching', desc: 'Custom protocol, app access, gym floor support.', price: '₹2,000/mo' },
-                { id: 'advanced', title: 'Advanced Access', desc: '1-on-1 dedicated daily check-ins, macro coaching, VIP floor access.', price: '₹4,000/mo' }
-              ].map(pkg => (
-                <button
-                  key={pkg.id}
-                  onClick={() => setSelectedPackage(pkg.id)}
-                  className={`w-full text-left p-5 rounded-2xl border-2 transition-all relative overflow-hidden group ${
-                    selectedPackage === pkg.id
-                      ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10'
-                      : 'border-outline-variant/20 bg-surface-container-low hover:border-primary/50'
-                  }`}
-                >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-black text-on-surface text-lg uppercase">{pkg.title}</span>
-                    <span className="text-primary font-bold text-sm bg-primary/10 px-2 py-0.5 rounded-md">{pkg.price}</span>
+                  ['Name', name],
+                  ['Goal', objective?.charAt(0).toUpperCase() + objective?.slice(1)],
+                  ['Current', `${weight}kg → ${targetWeight}kg`],
+                  ['Days', workoutDays.join(', ')],
+                  ['Time', workoutTime],
+                  ['Equipment', equipment?.replace('_', ' ')],
+                  ['Diet', diet?.replace('_', ' ')],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex justify-between py-1.5 border-b border-outline-variant/5 last:border-0">
+                    <span className="text-[10px] text-on-surface-variant font-black uppercase tracking-widest">{k}</span>
+                    <span className="text-sm font-headline font-bold text-on-surface capitalize">{v}</span>
                   </div>
-                  <p className="text-xs text-on-surface-variant">{pkg.desc}</p>
-                  {selectedPackage === pkg.id && (
-                    <div className="absolute top-0 right-0 w-0 h-0 border-t-[30px] border-t-primary border-l-[30px] border-l-transparent">
-                      <span className="material-symbols-outlined text-on-primary-fixed text-[10px] absolute -top-7 -right-1">check</span>
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            {/* Duration Selection */}
-            <div className="space-y-3 mt-6">
-              <div className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest flex items-center gap-2 mb-2">
-                <span className="material-symbols-outlined text-primary text-sm">calendar_month</span>
-                Commitment Duration
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { value: 3, label: '3 Months', sub: 'Standard' },
-                  { value: 6, label: '6 Months', sub: '15% Off' },
-                  { value: 12, label: '12 Months', sub: '25% Off' }
-                ].map(dur => (
-                  <button
-                    key={dur.value}
-                    onClick={() => setSelectedDuration(dur.value)}
-                    className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all ${
-                        selectedDuration === dur.value
-                          ? 'bg-primary/20 border-primary text-primary shadow-sm shadow-primary/10' 
-                          : 'bg-surface-container-low border-outline-variant/20 text-on-surface hover:border-primary/40'
-                      }`}
-                  >
-                    <span className="font-black text-xl mb-1">{dur.value} <span className="text-xs font-bold">mo</span></span>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                      selectedDuration === dur.value ? 'bg-primary/20 text-primary' : 'bg-surface-container-highest text-on-surface-variant'
-                    }`}>
-                      {dur.sub}
-                    </span>
-                  </button>
                 ))}
               </div>
-            </div>
 
-            {/* Payment Summary */}
-            <div className="mt-8 bg-surface-container rounded-2xl p-6 border border-primary/30 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-              <div className="text-[10px] font-black uppercase text-on-surface-variant tracking-widest mb-1">Total Amount</div>
-              <div className="flex items-baseline gap-1 mt-1">
-                <span className="text-2xl text-on-surface font-bold">₹</span>
-                <span className="text-5xl font-headline font-black text-primary">{getPricing().toLocaleString()}</span>
-              </div>
-              <div className="text-xs text-on-surface-variant mt-2 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-xs">lock</span> Secure payment on next step
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 5: Success */}
-        {step === 5 && (
-          <div className="text-center space-y-8 animate-in slide-in-from-bottom-8 duration-700 fade-in py-12">
-            <div className="w-32 h-32 bg-primary/20 rounded-full mx-auto flex items-center justify-center relative">
-              <div className="absolute inset-0 bg-primary/10 rounded-full animate-ping"></div>
-              <span className="material-symbols-outlined text-6xl text-primary drop-shadow-[0_0_15px_rgba(205,255,24,0.5)]" style={{fontVariationSettings: "'FILL' 1"}}>how_to_reg</span>
-            </div>
-            <div>
-              <h1 className="text-3xl font-black font-headline text-on-surface mb-3 uppercase italic">You're a Member!</h1>
-              <p className="text-on-surface-variant max-w-[280px] mx-auto">
-                Your profile is locked in. Your personalized {objective === 'bulk' ? 'Bulk' : objective === 'lean' ? 'Lean' : 'Explosive'} protocol is ready.
-              </p>
-            </div>
-            <div className="bg-surface-container rounded-2xl p-5 text-left space-y-3 border border-outline-variant/10">
-              <div className="flex justify-between py-1 border-b border-outline-variant/5 pb-2 mb-2">
-                <span className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Name</span>
-                <span className="text-sm font-headline font-black text-on-surface truncate max-w-[150px] text-right">{name || 'Member'}</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Weight</span>
-                <span className="text-sm font-headline font-black text-on-surface">{weight} kg</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Height</span>
-                <span className="text-sm font-headline font-black text-on-surface">{height} cm</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Age</span>
-                <span className="text-sm font-headline font-black text-on-surface">{age} yrs</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Track</span>
-                <span className="text-sm font-headline font-black text-primary uppercase">{objective}</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Goal</span>
-                <span className="text-sm font-headline font-black text-primary">{targetWeight} kg</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Training Days</span>
-                <span className="text-sm font-headline font-black text-on-surface">{workoutDays.join(', ')}</span>
-              </div>
-              <div className="flex justify-between py-1 mt-2 pt-2 border-t border-outline-variant/5">
-                <span className="text-xs text-on-surface-variant font-bold uppercase tracking-widest">Time</span>
-                <span className="text-sm font-headline font-black text-on-surface capitalize">{workoutTime}</span>
-              </div>
-            </div>
-            <button
-              onClick={goHome}
-              className="mt-4 w-full bg-primary text-on-primary-fixed py-5 rounded-full font-black text-lg active:scale-95 transition-transform shadow-lg shadow-primary/20"
-            >
-              ENTER GYMOS
-            </button>
-          </div>
-        )}
+              <button onClick={() => navigate('/member')}
+                className="w-full bg-primary text-on-primary py-5 rounded-2xl font-headline font-bold text-lg uppercase tracking-wide active:scale-95 transition-transform shadow-xl shadow-primary/20">
+                Enter GymOS
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Bottom CTA */}
-      {step < 5 && (
-        <div className="pt-8">
-          <button
-            onClick={handleNext}
-            disabled={isSubmitting || !canProceed()}
-            className="w-full bg-primary disabled:bg-surface-container-highest disabled:text-on-surface-variant disabled:opacity-50 text-on-primary-fixed py-5 rounded-full font-black text-lg active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:shadow-none"
-          >
+      {/* ─── Bottom CTA ─── */}
+      {step <= TOTAL_STEPS && (
+        <div className="sticky bottom-0 px-6 py-4 bg-surface/90 backdrop-blur-xl border-t border-outline-variant/5">
+          <button onClick={handleNext} disabled={isSubmitting || !canProceed}
+            className="w-full bg-primary disabled:bg-surface-container-highest disabled:text-on-surface-variant/50 text-on-primary py-4 rounded-2xl font-headline font-bold text-base uppercase tracking-wide active:scale-[0.98] transition-all shadow-lg shadow-primary/20 disabled:shadow-none flex items-center justify-center gap-2">
             {isSubmitting ? (
-              <>
-                <span className="material-symbols-outlined animate-spin">sync</span>
-                PROCESSING...
-              </>
+              <><span className="material-symbols-outlined animate-spin text-lg">sync</span> Processing...</>
             ) : (
-              <>
-                {step === 4 
-                  ? (paymentInitiated ? "I'VE COMPLETED PAYMENT" : `PAY ₹${getPricing().toLocaleString()} VIA UPI`) 
-                  : 'CONTINUE'}
-                {step !== 4 && <span className="material-symbols-outlined">arrow_forward</span>}
+              <>{step === TOTAL_STEPS ? 'Complete Profile' : 'Continue'}
+                <span className="material-symbols-outlined text-lg">{step === TOTAL_STEPS ? 'check' : 'arrow_forward'}</span>
               </>
             )}
           </button>
-          
-          {step === 4 && paymentInitiated && (
-            <p className="text-center text-[10px] text-on-surface-variant font-medium mt-3 tracking-wide uppercase">
-              Click after successful transfer to <br/> <strong className="text-primary">brajrajchaturvedi28@okhdfcbank</strong>
-            </p>
-          )}
         </div>
       )}
     </div>
