@@ -1,109 +1,125 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { getMembers, syncCurrentMember, GOAL_LABELS, GOAL_COLORS, EQUIP_LABELS, daysSince, memberStatus } from '../../services/trainerService'
 
-const allMembers = [
-  { id: '1', name: 'Sienna Williams', risk: 'high', consistency: 22, lastVisit: '21 days ago', plan: 'Weight Loss', status: 'At Risk' },
-  { id: '2', name: 'Marcus Thorne', risk: 'high', consistency: 35, lastVisit: '14 days ago', plan: 'Build Muscle', status: 'At Risk' },
-  { id: '3', name: 'Elena Rodriguez', risk: 'medium', consistency: 58, lastVisit: '5 days ago', plan: 'General Health', status: 'Watch' },
-  { id: '4', name: 'David Chen', risk: 'medium', consistency: 62, lastVisit: '3 days ago', plan: 'Build Muscle', status: 'Watch' },
-  { id: '5', name: 'Priya Sharma', risk: 'medium', consistency: 65, lastVisit: '4 days ago', plan: 'Stamina', status: 'Watch' },
-  { id: '6', name: 'Alex Turner', risk: 'low', consistency: 88, lastVisit: 'Today', plan: 'Build Muscle', status: 'Active' },
-  { id: '7', name: 'Jordan Blake', risk: 'low', consistency: 92, lastVisit: 'Today', plan: 'Build Muscle', status: 'Active' },
-  { id: '8', name: 'Riley Kim', risk: 'low', consistency: 85, lastVisit: 'Yesterday', plan: 'Weight Loss', status: 'Active' },
-  { id: '9', name: 'Sam Patel', risk: 'low', consistency: 78, lastVisit: '2 days ago', plan: 'General Health', status: 'Active' },
-  { id: '10', name: 'Morgan Lee', risk: 'low', consistency: 91, lastVisit: 'Today', plan: 'Stamina', status: 'Active' },
-]
-
-const riskColor = { high: 'text-error bg-error/10', medium: 'text-secondary bg-secondary/10', low: 'text-primary bg-primary/10' }
-const tabs = ['All', 'At Risk', 'Watch', 'Active']
+const tabs = ['All', 'Active', 'New', 'Watch', 'At Risk']
+const statusMap = { 'Active': 'active', 'New': 'new', 'Watch': 'watch', 'At Risk': 'at-risk' }
 
 export default function MemberDirectory() {
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState('All')
+  const [members, setMembers] = useState([])
 
-  const filtered = allMembers.filter(m => {
-    const matchSearch = m.name.toLowerCase().includes(search.toLowerCase())
-    const matchTab = activeTab === 'All' || m.status === activeTab
-    return matchSearch && matchTab
-  })
+  useEffect(() => {
+    setMembers(syncCurrentMember())
+  }, [])
+
+  const filtered = useMemo(() => {
+    return members.filter(m => {
+      const matchSearch = m.name.toLowerCase().includes(search.toLowerCase())
+      const matchTab = activeTab === 'All' || memberStatus(m) === statusMap[activeTab]
+      return matchSearch && matchTab
+    })
+  }, [members, search, activeTab])
+
+  const tabCounts = useMemo(() => ({
+    All: members.length,
+    Active: members.filter(m => memberStatus(m) === 'active').length,
+    New: members.filter(m => memberStatus(m) === 'new').length,
+    Watch: members.filter(m => memberStatus(m) === 'watch').length,
+    'At Risk': members.filter(m => memberStatus(m) === 'at-risk').length,
+  }), [members])
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8 animate-in fade-in duration-500">
+      {/* Header */}
       <div>
-        <h2 className="font-headline text-2xl font-bold mb-1">Member Directory</h2>
-        <p className="text-on-surface-variant text-sm">{allMembers.length} assigned members</p>
+        <h2 className="font-headline text-2xl font-black uppercase tracking-tight">Members</h2>
+        <p className="text-on-surface-variant text-sm">{members.length} assigned to you</p>
       </div>
 
       {/* Search */}
       <div className="relative">
-        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
-        <input
-          type="text"
-          placeholder="Search members..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-surface-container border border-outline-variant/10 rounded-xl pl-11 pr-4 py-3 text-sm text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/30 focus:ring-1 focus:ring-primary/20"
-        />
+        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
+        <input type="text" placeholder="Search by name..."
+          value={search} onChange={e => setSearch(e.target.value)}
+          className="w-full bg-surface-container border border-outline-variant/10 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all" />
       </div>
 
       {/* Filter Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all ${
-              activeTab === tab
-                ? 'bg-primary text-on-primary-fixed'
-                : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-highest'
-            }`}
-          >
+        {tabs.map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all flex items-center gap-1.5 ${
+              activeTab === tab ? 'bg-primary text-on-primary shadow-md shadow-primary/20' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-highest'
+            }`}>
             {tab}
+            {tabCounts[tab] > 0 && <span className={`text-[9px] ${activeTab === tab ? 'opacity-80' : 'opacity-50'}`}>({tabCounts[tab]})</span>}
           </button>
         ))}
       </div>
 
       {/* Member List */}
       <div className="space-y-3">
-        {filtered.map((member) => (
-          <Link
-            key={member.id}
-            to={`/trainer/member/${member.id}`}
-            className="flex items-center gap-4 p-4 bg-surface-container rounded-xl hover:bg-surface-container-high transition-all group"
-          >
-            <div className="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center flex-shrink-0">
-              <span className="material-symbols-outlined text-on-surface-variant">person</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="font-headline font-bold text-sm truncate">{member.name}</h4>
-                <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-tighter ${riskColor[member.risk]}`}>
-                  {member.risk}
+        {filtered.map(m => {
+          const status = memberStatus(m)
+          const inactive = daysSince(m.lastActive || m.onboardedAt)
+          const statusBadge = status === 'at-risk'
+            ? { label: 'At Risk', cls: 'text-error bg-error/10 border-error/20' }
+            : status === 'watch'
+            ? { label: 'Watch', cls: 'text-amber-400 bg-amber-400/10 border-amber-400/20' }
+            : status === 'new'
+            ? { label: 'New', cls: 'text-cyan-400 bg-cyan-400/10 border-cyan-400/20' }
+            : { label: 'Active', cls: 'text-primary bg-primary/10 border-primary/20' }
+
+          return (
+            <Link key={m.id} to={`/trainer/member/${m.id}`}
+              className="flex items-center gap-4 p-4 bg-surface-container rounded-2xl hover:bg-surface-container-high transition-all group border border-outline-variant/5">
+              {/* Avatar */}
+              <div className="w-12 h-12 rounded-xl bg-surface-container-highest flex items-center justify-center flex-shrink-0 relative">
+                <span className="material-symbols-outlined text-on-surface-variant">person</span>
+                {status === 'new' && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-cyan-400 rounded-full border-2 border-surface animate-pulse" />
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <h4 className="font-headline font-bold text-sm truncate group-hover:text-primary transition-colors">{m.name}</h4>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-on-surface-variant flex-wrap">
+                  <span className={`font-bold ${GOAL_COLORS[m.objective] || 'text-primary'}`}>{GOAL_LABELS[m.objective] || 'Fitness'}</span>
+                  <span>·</span>
+                  <span>{m.weight}kg</span>
+                  <span>·</span>
+                  <span>{m.experience}</span>
+                  {m.conditions?.some(c => c !== 'None') && (
+                    <>
+                      <span>·</span>
+                      <span className="text-error flex items-center gap-0.5"><span className="material-symbols-outlined text-[10px]">warning</span>Medical</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Status + Ring */}
+              <div className="flex flex-col items-end gap-1">
+                <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider border ${statusBadge.cls}`}>{statusBadge.label}</span>
+                <span className="text-[9px] text-on-surface-variant">
+                  {inactive === 0 ? 'Today' : inactive === 1 ? 'Yesterday' : `${inactive}d ago`}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-[10px] text-on-surface-variant">
-                <span>{member.plan}</span>
-                <span>·</span>
-                <span>Last: {member.lastVisit}</span>
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <div className="relative w-10 h-10">
-                <svg className="performance-ring w-full h-full" viewBox="0 0 40 40">
-                  <circle cx="20" cy="20" r="16" fill="transparent" stroke="#23262a" strokeWidth="3"></circle>
-                  <circle cx="20" cy="20" r="16" fill="transparent" stroke={member.risk === 'high' ? '#ff7351' : member.risk === 'medium' ? '#ece856' : '#beee00'} strokeDasharray="100.5" strokeDashoffset={100.5 - (member.consistency / 100) * 100.5} strokeLinecap="round" strokeWidth="3"></circle>
-                </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold">{member.consistency}</span>
-              </div>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          )
+        })}
       </div>
 
       {filtered.length === 0 && (
-        <div className="text-center py-12 text-on-surface-variant">
-          <span className="material-symbols-outlined text-4xl mb-2">search_off</span>
-          <p className="text-sm">No members found</p>
+        <div className="text-center py-16 text-on-surface-variant">
+          <span className="material-symbols-outlined text-5xl mb-3 opacity-30">search_off</span>
+          <p className="text-sm font-medium">No members found</p>
+          <p className="text-xs opacity-60 mt-1">Try a different search or filter</p>
         </div>
       )}
     </div>

@@ -1,102 +1,103 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+
+const roles = [
+  {
+    id: 'member',
+    icon: 'fitness_center',
+    title: 'Member',
+    desc: 'Track workouts, follow plans, and reach your fitness goals.',
+    color: 'from-primary/20 to-primary/5',
+    border: 'border-primary/30',
+    path: '/onboarding',
+  },
+  {
+    id: 'trainer',
+    icon: 'sports',
+    title: 'Trainer',
+    desc: 'Manage your clients, create plans, and track their progress.',
+    color: 'from-cyan-400/20 to-cyan-400/5',
+    border: 'border-cyan-400/30',
+    path: '/trainer',
+  },
+  {
+    id: 'owner',
+    icon: 'domain',
+    title: 'Owner',
+    desc: 'Monitor revenue, retention, and run your gym analytics.',
+    color: 'from-amber-400/20 to-amber-400/5',
+    border: 'border-amber-400/30',
+    path: '/owner',
+  },
+]
 
 export default function RoleSelector() {
-  const roles = [
-    {
-      title: 'Member',
-      subtitle: 'Your personal fitness command center',
-      icon: 'fitness_center',
-      path: '/member',
-      desc: 'Track workouts, check in, monitor consistency score and streaks. Your gym experience, optimized.'
-    },
-    {
-      title: 'Trainer',
-      subtitle: 'Retention-driven coaching tools',
-      icon: 'monitoring',
-      path: '/trainer',
-      desc: 'Action queue with at-risk members, 1-tap outreach, member directory, and schedule management.'
-    },
-    {
-      title: 'Owner',
-      subtitle: 'Business intelligence dashboard',
-      icon: 'analytics',
-      path: '/owner',
-      desc: 'Retention metrics, churn risk lists, renewal pipeline, and revenue dashboards — all in real time.'
+  const { user, profile, updateRole } = useAuth()
+  const navigate = useNavigate()
+  const [selecting, setSelecting] = useState(null)
+
+  const handleSelect = async (role) => {
+    setSelecting(role.id)
+    try {
+      await updateRole(role.id)
+      // Members need onboarding, others go straight to dashboard
+      navigate(role.path, { replace: true })
+    } catch (e) {
+      console.error('Role selection error:', e)
+      setSelecting(null)
     }
-  ]
+  }
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-6 py-16 relative overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-[150px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-secondary/5 rounded-full blur-[150px] translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
+    <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-6">
+      {/* Ambient glow */}
+      <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Logo & Heading */}
-      <div className="text-center mb-16 relative z-10">
-        <div className="flex items-center justify-center gap-3 mb-6">
-          <span className="material-symbols-outlined text-primary text-4xl" style={{fontVariationSettings: "'FILL' 1"}}>bolt</span>
-          <h1 className="font-headline text-5xl md:text-6xl font-black tracking-tighter text-primary uppercase italic">GYMOS</h1>
-        </div>
-        <p className="text-on-surface-variant text-lg max-w-md mx-auto">A gym retention and operating system. Not another fitness tracker — a behavior change engine.</p>
-        <div className="flex items-center justify-center gap-4 mt-6">
-          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-on-surface-variant font-label">Predict</span>
-          <span className="w-1 h-1 rounded-full bg-primary"></span>
-          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-on-surface-variant font-label">Intervene</span>
-          <span className="w-1 h-1 rounded-full bg-primary"></span>
-          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-on-surface-variant font-label">Retain</span>
-          <span className="w-1 h-1 rounded-full bg-primary"></span>
-          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-on-surface-variant font-label">Renew</span>
-        </div>
+      <div className="w-full max-w-md text-center mb-10">
+        <h1 className="font-headline text-4xl font-black text-on-surface uppercase tracking-tight mb-2">
+          GYMOS<span className="text-primary">.</span>
+        </h1>
+        {user && (
+          <div className="flex items-center justify-center gap-3 mb-6">
+            {user.user_metadata?.avatar_url && (
+              <img src={user.user_metadata.avatar_url} alt="" className="w-8 h-8 rounded-full border border-primary/30" />
+            )}
+            <p className="text-on-surface-variant text-sm">
+              Welcome, <span className="text-on-surface font-bold">{user.user_metadata?.full_name || user.email}</span>
+            </p>
+          </div>
+        )}
+        <h2 className="font-headline text-xl font-bold text-on-surface uppercase tracking-wide">Choose Your Role</h2>
+        <p className="text-on-surface-variant text-sm mt-1">How will you use GymOS?</p>
       </div>
 
-      {/* Role Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full relative z-10">
-        {roles.map((role) => (
-          <Link
-            key={role.title}
-            to={role.path}
-            className="group relative flex flex-col p-8 bg-surface-container hover:bg-surface-container-high transition-all duration-300 rounded-xl border border-outline-variant/10 hover:border-primary/20 overflow-hidden"
+      <div className="w-full max-w-md space-y-4">
+        {roles.map(role => (
+          <button
+            key={role.id}
+            onClick={() => handleSelect(role)}
+            disabled={selecting !== null}
+            className={`w-full bg-gradient-to-r ${role.color} p-6 rounded-2xl border ${role.border} text-left transition-all active:scale-[0.98] hover:shadow-lg disabled:opacity-50 group relative overflow-hidden`}
           >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500 pointer-events-none"></div>
-            <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary transition-colors duration-300">
-              <span className="material-symbols-outlined text-primary group-hover:text-on-primary-fixed text-2xl" style={{fontVariationSettings: "'FILL' 1"}}>{role.icon}</span>
+            {selecting === role.id && (
+              <div className="absolute inset-0 bg-surface/80 flex items-center justify-center rounded-2xl">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-surface/50 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-2xl text-primary">{role.icon}</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-headline font-black text-lg text-on-surface uppercase">{role.title}</h3>
+                <p className="text-on-surface-variant text-xs mt-0.5">{role.desc}</p>
+              </div>
+              <span className="material-symbols-outlined text-on-surface-variant/50 group-hover:text-primary transition-colors">arrow_forward</span>
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant font-label mb-2">{role.subtitle}</span>
-            <h2 className="font-headline text-3xl font-bold text-on-surface mb-3">{role.title}</h2>
-            <p className="text-on-surface-variant text-sm leading-relaxed flex-1">{role.desc}</p>
-            <div className="mt-6 flex items-center gap-2 text-primary font-bold text-sm">
-              <span>Enter</span>
-              <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
-            </div>
-          </Link>
+          </button>
         ))}
       </div>
-
-      {/* Onboarding CTA */}
-      <div className="mt-10 w-full max-w-5xl relative z-10">
-        <Link
-          to="/onboarding"
-          className="group w-full flex items-center justify-between p-6 bg-gradient-to-r from-primary/10 to-primary-container/5 hover:from-primary/20 hover:to-primary-container/10 border-2 border-primary/20 hover:border-primary/40 rounded-xl transition-all duration-300 relative overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-          <div className="relative z-10 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-primary/20 group-hover:bg-primary flex items-center justify-center transition-colors duration-300">
-              <span className="material-symbols-outlined text-primary group-hover:text-on-primary-fixed text-2xl" style={{fontVariationSettings: "'FILL' 1"}}>person_add</span>
-            </div>
-            <div>
-              <h3 className="font-headline font-black text-on-surface text-lg uppercase tracking-tight">New Here? Sign Up</h3>
-              <p className="text-on-surface-variant text-sm">Complete onboarding to get your personalized training protocol.</p>
-            </div>
-          </div>
-          <div className="relative z-10 flex items-center gap-2 text-primary font-bold text-sm shrink-0">
-            <span>Get Started</span>
-            <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
-          </div>
-        </Link>
-      </div>
-
-      {/* Footer tagline */}
-      <p className="text-on-surface-variant/50 text-xs mt-16 font-label uppercase tracking-widest">Kinetic Forge — v0.1 MVP</p>
     </div>
   )
 }

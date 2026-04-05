@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import AuthCallback from './pages/AuthCallback'
 import RoleSelector from './pages/RoleSelector'
 import LandingPage from './pages/LandingPage'
 import OnboardingFlow from './pages/member/OnboardingFlow'
@@ -37,6 +38,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/select-role" element={<RoleSelector />} />
       <Route path="/onboarding" element={<OnboardingFlow />} />
 
       {/* Member Routes */}

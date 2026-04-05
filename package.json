@@ -13,13 +13,17 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@netlify/functions": "^5.1.5",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "@supabase/supabase-js": "^2.101.1",
+    "@twilio/conversations": "^3.0.0",
     "framer-motion": "^12.38.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.2",
-    "three": "^0.183.2"
+    "three": "^0.183.2",
+    "twilio": "^5.13.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.1",

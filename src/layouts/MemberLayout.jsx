@@ -12,7 +12,8 @@ const navItems = [
 
 export default function MemberLayout() {
   const location = useLocation()
-  const [firstName, setFirstName] = useState('Alex')
+  const [firstName, setFirstName] = useState('Athlete')
+  const [profilePhoto, setProfilePhoto] = useState(null)
 
   useEffect(() => {
     try {
@@ -23,8 +24,24 @@ export default function MemberLayout() {
           setFirstName(data.name.split(' ')[0])
         }
       }
+      const photo = localStorage.getItem('gymos_profile_photo')
+      if (photo) setProfilePhoto(photo)
     } catch (e) {}
   }, [])
+
+  // Listen for photo changes (when user uploads on profile page)
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === 'gymos_profile_photo') setProfilePhoto(e.newValue)
+    }
+    window.addEventListener('storage', onStorage)
+    // Also poll for same-tab updates
+    const interval = setInterval(() => {
+      const p = localStorage.getItem('gymos_profile_photo')
+      if (p !== profilePhoto) setProfilePhoto(p)
+    }, 1000)
+    return () => { window.removeEventListener('storage', onStorage); clearInterval(interval) }
+  }, [profilePhoto])
 
   return (
     <div className="min-h-screen pb-28">
@@ -32,9 +49,13 @@ export default function MemberLayout() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/60 backdrop-blur-2xl border-b border-white/5 flex justify-between items-center px-6 h-16 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full overflow-hidden border border-primary/30">
-            <div className="w-full h-full bg-surface-container flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-sm">person</span>
-            </div>
+            {profilePhoto ? (
+              <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-surface-container flex items-center justify-center">
+                <span className="material-symbols-outlined text-primary text-sm">person</span>
+              </div>
+            )}
           </div>
           <div className="flex flex-col">
             <span className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant font-label">MEMBER</span>
