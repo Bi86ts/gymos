@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Reorder } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 
 const DAY_KEYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -85,10 +86,61 @@ function getCurrentDayKey() {
 }
 
 export default function WeeklyPlan() {
+  const navigate = useNavigate()
   const [selectedDay, setSelectedDay] = useState(getCurrentDayKey())
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [plan, setPlan] = useState(DEFAULT_PLAN)
   const [customOrder, setCustomOrder] = useState([...DAY_KEYS])
+  const [sessionActive, setSessionActive] = useState(false)
+  const [sessionSeconds, setSessionSeconds] = useState(0)
+  const [completedExercises, setCompletedExercises] = useState([])
+  const timerRef = useRef(null)
+
+  // Session timer
+  useEffect(() => {
+    if (sessionActive) {
+      timerRef.current = setInterval(() => setSessionSeconds(s => s + 1), 1000)
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [sessionActive])
+
+  const formatTime = (s) => {
+    const m = Math.floor(s / 60)
+    const sec = s % 60
+    return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
+  }
+
+  const startSession = () => {
+    setSessionActive(true)
+    setSessionSeconds(0)
+    setCompletedExercises([])
+  }
+
+  const toggleExercise = (idx) => {
+    setCompletedExercises(prev =>
+      prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+    )
+  }
+
+  const finishSession = () => {
+    setSessionActive(false)
+    // Save to localStorage
+    try {
+      const log = JSON.parse(localStorage.getItem('gymos_workout_log') || '[]')
+      log.push({
+        day: selectedDay,
+        focus: dayData.focus,
+        duration: sessionSeconds,
+        completedCount: completedExercises.length,
+        totalExercises: dayData.exercises.length,
+        date: new Date().toISOString(),
+      })
+      localStorage.setItem('gymos_workout_log', JSON.stringify(log))
+    } catch (e) {}
+    navigate('/member/checkin')
+  }
 
   const saveCustomization = () => {
     const originalFocuses = customOrder.map(day => plan[day])
@@ -278,11 +330,76 @@ export default function WeeklyPlan() {
                 ))}
               </div>
 
-              {!dayData.rest && (
-                <button className="w-full mt-6 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed font-black py-5 rounded-2xl text-lg shadow-xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3">
-                  <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>play_circle</span>
-                  START SESSION
-                </button>
+              {!dayData.rest && !sessionActive && (
+                <>
+                  <button
+                    onClick={startSession}
+                    className="w-full mt-6 bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed font-black py-5 rounded-2xl text-lg shadow-xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3"
+                  >
+                    <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>play_circle</span>
+                    START SESSION
+                  </button>
+                  <button
+                    onClick={() => navigate(`/member/workout-plan?muscle=${encodeURIComponent(dayData.focus.split(' & ')[0].split(' / ')[0])}`)}
+                    className="w-full mt-3 bg-surface-container-highest text-on-surface-variant font-bold py-3.5 rounded-xl text-sm active:scale-95 transition-all flex items-center justify-center gap-2 hover:text-primary hover:border-primary/30 border border-outline-variant/10"
+                  >
+                    <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                    Generate AI Plan for {dayData.focus}
+                  </button>
+                </>
+              )}
+              {sessionActive && (
+                <div className="mt-6 space-y-4">
+                  {/* Live Timer */}
+                  <div className="bg-primary/10 border border-primary/30 rounded-2xl p-5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-error rounded-full animate-pulse" />
+                      <span className="text-xs font-black text-primary uppercase tracking-widest">Session Active</span>
+                    </div>
+                    <span className="font-headline text-3xl font-black text-primary tabular-nums">{formatTime(sessionSeconds)}</span>
+                  </div>
+
+                  {/* Exercise Checklist */}
+                  <div className="space-y-2">
+                    {dayData.exercises.map((ex, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => toggleExercise(idx)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
+                          completedExercises.includes(idx)
+                            ? 'bg-primary/10 border-primary/30 opacity-70'
+                            : 'bg-surface-container-highest border-outline-variant/10'
+                        }`}
+                      >
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                          completedExercises.includes(idx) ? 'bg-primary border-primary' : 'border-on-surface-variant/30'
+                        }`}>
+                          {completedExercises.includes(idx) && (
+                            <span className="material-symbols-outlined text-on-primary-fixed text-xs">check</span>
+                          )}
+                        </div>
+                        <span className={`text-sm font-bold flex-1 ${completedExercises.includes(idx) ? 'line-through text-on-surface-variant' : 'text-on-surface'}`}>{ex.name}</span>
+                        <span className="text-[10px] text-on-surface-variant">{ex.sets} • {ex.reps}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Progress + Finish */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 bg-surface-container-highest rounded-full h-2 overflow-hidden">
+                      <div className="bg-primary h-full rounded-full transition-all duration-500" style={{ width: `${(completedExercises.length / dayData.exercises.length) * 100}%` }} />
+                    </div>
+                    <span className="text-xs font-bold text-on-surface-variant">{completedExercises.length}/{dayData.exercises.length}</span>
+                  </div>
+
+                  <button
+                    onClick={finishSession}
+                    className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary-fixed font-black py-5 rounded-2xl text-lg shadow-xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3"
+                  >
+                    <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>check_circle</span>
+                    FINISH SESSION
+                  </button>
+                </div>
               )}
             </div>
           )}

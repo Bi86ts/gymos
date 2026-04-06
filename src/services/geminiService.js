@@ -1,7 +1,7 @@
 // Centralized Gemini API service for AI workout generation
 import { getExercisesByMuscle } from '../data/exerciseData'
 
-const GEMINI_API_KEY = 'AIzaSyDNdtoVgEG39NHIfdMH0GKPpKpjd1jvErY'
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyD0xrZcbiGUGzY76r4LwcEoPrui9nVua1w'
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
 
 /**
