@@ -4,6 +4,104 @@ import { getMemberById, getNotes, addNote, GOAL_LABELS, GOAL_COLORS, EQUIP_LABEL
 
 const DIET_LABELS = { no_pref: 'No Preference', vegetarian: 'Vegetarian', vegan: 'Vegan', keto: 'Keto', high_protein: 'High Protein', flexible: 'Flexible' }
 
+// ─── Attendance Calendar Component ───
+function AttendanceCalendar({ member }) {
+  const [currentDate, setCurrentDate] = useState(new Date())
+  
+  const daysInMonth = (year, month) => new Date(year, month + 1, 0).getDate()
+  const firstDayOfMonth = (year, month) => new Date(year, month, 1).getDay()
+  
+  const year = currentDate.getFullYear()
+  const month = currentDate.getMonth()
+  
+  const handlePrevMonth = () => setCurrentDate(new Date(year, month - 1, 1))
+  const handleNextMonth = () => setCurrentDate(new Date(year, month + 1, 1))
+  
+  const monthName = currentDate.toLocaleString('default', { month: 'long' })
+  
+  const calendarDays = []
+  const offset = firstDayOfMonth(year, month)
+  
+  for (let i = 0; i < offset; i++) calendarDays.push(null)
+  for (let i = 1; i <= daysInMonth(year, month); i++) calendarDays.push(i)
+  
+  const getDayStatus = (day) => {
+    if (!day) return null
+    // Create date string in YYYY-MM-DD format (local)
+    const d = new Date(year, month, day)
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    
+    const isPresent = member.attendance?.includes(dateStr)
+    
+    // Check if it was a scheduled workout day
+    const dayOfWeek = d.toLocaleDateString('en-US', { weekday: 'short' })
+    const isScheduled = member.workoutDays?.includes(dayOfWeek)
+    
+    const today = new Date()
+    today.setHours(0,0,0,0)
+    const isPast = d < today
+    
+    if (isPresent) return 'present'
+    if (isPast && isScheduled) return 'missed'
+    return null
+  }
+
+  return (
+    <section className="bg-surface-container rounded-2xl p-5 border border-outline-variant/10 shadow-md">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-[10px] font-black text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
+          <span className="material-symbols-outlined text-primary text-sm" style={{fontVariationSettings: "'FILL' 1"}}>calendar_today</span>
+          Attendance Hub
+        </h3>
+        <div className="flex items-center gap-4 bg-surface-container-high px-3 py-1.5 rounded-xl border border-outline-variant/5">
+          <button onClick={handlePrevMonth} className="text-on-surface-variant hover:text-primary transition-all active:scale-90">
+            <span className="material-symbols-outlined text-sm">chevron_left</span>
+          </button>
+          <span className="text-[10px] font-black uppercase tracking-widest text-on-surface min-w-[100px] text-center">{monthName} {year}</span>
+          <button onClick={handleNextMonth} className="text-on-surface-variant hover:text-primary transition-all active:scale-90">
+            <span className="material-symbols-outlined text-sm">chevron_right</span>
+          </button>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-7 gap-1 text-center justify-items-center">
+        {['S','M','T','W','T','F','S'].map(d => (
+          <span key={d} className="text-[9px] font-black text-on-surface-variant/40 uppercase mb-2 w-8">{d}</span>
+        ))}
+        {calendarDays.map((day, i) => {
+          const status = getDayStatus(day)
+          const isToday = day && new Date().getDate() === day && new Date().getMonth() === month && new Date().getFullYear() === year
+          
+          if (!day) return <div key={i} className="h-8 w-8" />
+
+          return (
+            <div key={i} 
+              className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] font-black transition-all duration-300 shadow-sm
+                ${status === 'present' ? 'bg-primary text-on-primary shadow-primary/20' : 
+                  status === 'missed' ? 'bg-error text-white shadow-error/20' : 
+                  isToday ? 'border-2 border-primary text-primary bg-primary/5' :
+                  'bg-surface-container-high/50 text-on-surface-variant/70'}`}>
+              {day}
+            </div>
+          )
+        })}
+      </div>
+      
+      <div className="mt-6 pt-4 border-t border-outline-variant/10 flex gap-6 justify-center">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--md-sys-color-primary-rgb),0.5)]" />
+          <span className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest">Present</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-error shadow-[0_0_8px_rgba(var(--md-sys-color-error-rgb),0.5)]" />
+          <span className="text-[9px] font-black text-on-surface-variant uppercase tracking-widest">Missed</span>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+
 export default function MemberDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -211,6 +309,9 @@ export default function MemberDetail() {
           <p className="text-[8px] font-bold text-on-surface-variant uppercase tracking-widest mt-1">Inactive</p>
         </div>
       </section>
+
+      {/* ── Attendance Calendar ── */}
+      <AttendanceCalendar member={member} />
 
       {/* ── Action Buttons ── */}
       <div className="grid grid-cols-2 gap-3">

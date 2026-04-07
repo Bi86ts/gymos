@@ -18,13 +18,29 @@ const DEFAULT_TRAINER = {
   certifications: ['NASM-CPT', 'CrossFit L2', 'Precision Nutrition'],
 }
 
+// ─── Attendance Helpers ───
+const getPastDates = (days) => {
+  const dates = []
+  for (let i = 1; i <= days; i++) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    // Only add Mon/Wed/Fri (Monday=1, Wednesday=3, Friday=5) roughly for training days
+    if ([1, 3, 5].includes(d.getDay())) {
+      dates.push(d.toISOString().split('T')[0])
+    }
+  }
+  return dates
+}
+
 // ─── Seed Members (shown when no real members exist yet) ───
 const SEED_MEMBERS = [
-  { id: 'seed_1', name: 'Alex Turner', gender: 'male', age: 28, weight: 82, height: 178, targetWeight: 85, objective: 'bulk', experience: 'Advanced', focusAreas: ['Chest', 'Back'], limitations: [], conditions: [], equipment: 'full_gym', diet: 'high_protein', workoutDays: ['Mon','Tue','Wed','Thu','Fri'], sessionLength: '75', motivation: 'I want to compete in powerlifting next year.', onboardedAt: new Date(Date.now() - 30*86400000).toISOString(), streak: 12, totalSessions: 45, lastActive: new Date(Date.now() - 86400000).toISOString() },
-  { id: 'seed_2', name: 'Priya Sharma', gender: 'female', age: 24, weight: 62, height: 165, targetWeight: 56, objective: 'lean', experience: 'Intermediate', focusAreas: ['Core', 'Legs'], limitations: [], conditions: [], equipment: 'full_gym', diet: 'vegetarian', workoutDays: ['Mon','Wed','Fri','Sat'], sessionLength: '60', motivation: 'Feel confident and strong in my own skin.', onboardedAt: new Date(Date.now() - 20*86400000).toISOString(), streak: 8, totalSessions: 22, lastActive: new Date().toISOString() },
-  { id: 'seed_3', name: 'Jordan Blake', gender: 'male', age: 32, weight: 90, height: 183, targetWeight: 88, objective: 'athletic', experience: 'Advanced', focusAreas: ['Full Body'], limitations: ['Lower back pain'], conditions: [], equipment: 'full_gym', diet: 'flexible', workoutDays: ['Mon','Tue','Thu','Fri','Sat'], sessionLength: '90', motivation: 'Train like a warrior, recover like a monk.', onboardedAt: new Date(Date.now() - 45*86400000).toISOString(), streak: 15, totalSessions: 62, lastActive: new Date().toISOString() },
-  { id: 'seed_4', name: 'Riley Kim', gender: 'female', age: 22, weight: 55, height: 160, targetWeight: 58, objective: 'bulk', experience: 'Beginner', focusAreas: ['Glutes', 'Shoulders'], limitations: [], conditions: [], equipment: 'home_basic', diet: 'no_pref', workoutDays: ['Tue','Thu','Sat'], sessionLength: '45', motivation: 'Build the body I dream about.', onboardedAt: new Date(Date.now() - 10*86400000).toISOString(), streak: 5, totalSessions: 8, lastActive: new Date(Date.now() - 2*86400000).toISOString() },
-  { id: 'seed_5', name: 'Marcus Thorne', gender: 'male', age: 35, weight: 95, height: 188, targetWeight: 88, objective: 'lean', experience: 'Intermediate', focusAreas: ['Chest', 'Arms', 'Core'], limitations: ['Knee issue'], conditions: ['Hypertension'], equipment: 'full_gym', diet: 'keto', workoutDays: ['Mon','Wed','Fri'], sessionLength: '60', motivation: 'Get back to my college weight.', onboardedAt: new Date(Date.now() - 60*86400000).toISOString(), streak: 2, totalSessions: 30, lastActive: new Date(Date.now() - 5*86400000).toISOString() },
+  { id: 'seed_1', name: 'Alex Turner', gender: 'male', age: 28, weight: 82, height: 178, targetWeight: 85, objective: 'bulk', experience: 'Advanced', focusAreas: ['Chest', 'Back'], limitations: [], conditions: [], equipment: 'full_gym', diet: 'high_protein', workoutDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], sessionLength: '75', motivation: 'I want to compete in powerlifting next year.', onboardedAt: new Date(Date.now() - 30 * 86400000).toISOString(), streak: 12, totalSessions: 45, lastActive: new Date(Date.now() - 86400000).toISOString(), attendance: getPastDates(20).slice(0, 15) },
+  { id: 'seed_2', name: 'Priya Sharma', gender: 'female', age: 24, weight: 62, height: 165, targetWeight: 56, objective: 'lean', experience: 'Intermediate', focusAreas: ['Core', 'Legs'], limitations: [], conditions: [], equipment: 'full_gym', diet: 'vegetarian', workoutDays: ['Mon', 'Wed', 'Fri', 'Sat'], sessionLength: '60', motivation: 'Feel confident and strong in my own skin.', onboardedAt: new Date(Date.now() - 20 * 86400000).toISOString(), streak: 8, totalSessions: 22, lastActive: new Date().toISOString(), attendance: getPastDates(15).slice(0, 10) },
+  { id: 'seed_3', name: 'Jordan Blake', gender: 'male', age: 32, weight: 90, height: 183, targetWeight: 88, objective: 'athletic', experience: 'Advanced', focusAreas: ['Full Body'], limitations: ['Lower back pain'], conditions: [], equipment: 'full_gym', diet: 'flexible', workoutDays: ['Mon', 'Tue', 'Thu', 'Fri', 'Sat'], sessionLength: '90', motivation: 'Train like a warrior, recover like a monk.', onboardedAt: new Date(Date.now() - 45 * 86400000).toISOString(), streak: 15, totalSessions: 62, lastActive: new Date().toISOString(), attendance: getPastDates(30).slice(0, 25) },
+  { id: 'seed_4', name: 'Riley Kim', gender: 'female', age: 22, weight: 55, height: 160, targetWeight: 58, objective: 'bulk', experience: 'Beginner', focusAreas: ['Glutes', 'Shoulders'], limitations: [], conditions: [], equipment: 'home_basic', diet: 'no_pref', workoutDays: ['Tue', 'Thu', 'Sat'], sessionLength: '45', motivation: 'Build the body I dream about.', onboardedAt: new Date(Date.now() - 10 * 86400000).toISOString(), streak: 5, totalSessions: 8, lastActive: new Date(Date.now() - 2 * 86400000).toISOString(), attendance: getPastDates(10).slice(0, 5) },
+  { id: 'seed_5', name: 'Marcus Thorne', gender: 'male', age: 35, weight: 95, height: 188, targetWeight: 88, objective: 'lean', experience: 'Intermediate', focusAreas: ['Chest', 'Arms', 'Core'], limitations: ['Knee issue'], conditions: ['Hypertension'], equipment: 'full_gym', diet: 'keto', workoutDays: ['Mon', 'Wed', 'Fri'], sessionLength: '60', motivation: 'Get back to my college weight.', onboardedAt: new Date(Date.now() - 60 * 86400000).toISOString(), streak: 2, totalSessions: 30, lastActive: new Date(Date.now() - 5 * 86400000).toISOString(), attendance: getPastDates(40).slice(0, 20) },
+  { id: 'seed_6', name: 'Arjun Mehta', gender: 'male', age: 29, weight: 78, height: 175, targetWeight: 74, objective: 'lean', experience: 'Intermediate', focusAreas: ['Core', 'Chest', 'Back'], limitations: [], conditions: [], equipment: 'full_gym', diet: 'high_protein', workoutDays: ['Mon', 'Tue', 'Thu', 'Fri'], sessionLength: '60', motivation: 'Want to look fit for my wedding in 3 months.', onboardedAt: new Date(Date.now() - 50 * 86400000).toISOString(), streak: 0, totalSessions: 28, lastActive: new Date(Date.now() - 18 * 86400000).toISOString(), attendance: getPastDates(45).slice(0, 15) },
+  { id: 'seed_7', name: 'Sneha Verma', gender: 'female', age: 26, weight: 58, height: 162, targetWeight: 55, objective: 'athletic', experience: 'Beginner', focusAreas: ['Legs', 'Core'], limitations: [], conditions: [], equipment: 'full_gym', diet: 'vegetarian', workoutDays: ['Mon', 'Wed', 'Fri', 'Sat'], sessionLength: '45', motivation: 'Run a 5k without stopping.', onboardedAt: new Date(Date.now() - 35 * 86400000).toISOString(), streak: 0, totalSessions: 15, lastActive: new Date(Date.now() - 8 * 86400000).toISOString(), attendance: getPastDates(25).slice(0, 10) },
 ]
 
 // ─── Trainer Profile ───
@@ -47,7 +63,7 @@ export function getMembers() {
       const parsed = JSON.parse(saved)
       if (parsed.length > 0) return parsed
     }
-  } catch {}
+  } catch { }
   // Return seed + any real onboarded member
   const members = [...SEED_MEMBERS]
   syncCurrentMember(members)
@@ -107,6 +123,7 @@ export function syncCurrentMember(existingMembers) {
         streak: 0,
         totalSessions: 0,
         lastActive: d.onboardedAt || new Date().toISOString(),
+        attendance: [],
       }
       members = [newMember, ...members]
       saveMembers(members)
@@ -136,7 +153,7 @@ export function addNote(memberId, text) {
     if (!all[memberId]) all[memberId] = []
     all[memberId].unshift({ text, timestamp: new Date().toISOString() })
     localStorage.setItem(NOTES_KEY, JSON.stringify(all))
-  } catch {}
+  } catch { }
 }
 
 // ─── Helpers ───

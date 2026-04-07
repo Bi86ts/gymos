@@ -93,7 +93,10 @@ export default function TrainerMessageDetail() {
   // Apply preset from URL params
   useEffect(() => {
     const preset = searchParams.get('preset')
-    if (preset === 'urgent' && member) {
+    const prefill = searchParams.get('prefill')
+    if (prefill) {
+      setMessageText(decodeURIComponent(prefill))
+    } else if (preset === 'urgent' && member) {
       setMessageText(`Hey ${firstName}, I've noticed you haven't been in for a while. Let's get you back on track this week — when can you come in?`)
     }
   }, [searchParams, member])
