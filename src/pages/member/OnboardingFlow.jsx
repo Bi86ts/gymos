@@ -119,6 +119,7 @@ export default function OnboardingFlow() {
   const [name, setName] = useState('')
   const [gender, setGender] = useState('')
   const [age, setAge] = useState('')
+  const [lifestyle, setLifestyle] = useState('')
 
   // Step 2: Body
   const [weight, setWeight] = useState('')
@@ -130,11 +131,18 @@ export default function OnboardingFlow() {
   const [objective, setObjective] = useState('')
   const [experience, setExperience] = useState('')
   const [focusAreas, setFocusAreas] = useState([])
+  const [identityGoal, setIdentityGoal] = useState('')
 
   // Step 4: Health
   const [limitations, setLimitations] = useState([])
+  const [limitationNotes, setLimitationNotes] = useState('')
   const [conditions, setConditions] = useState([])
-  const [healthNotes, setHealthNotes] = useState('')
+  const [conditionNotes, setConditionNotes] = useState('')
+  const [onMedication, setOnMedication] = useState('')
+  const [medicationDetails, setMedicationDetails] = useState('')
+  const [sleepQuality, setSleepQuality] = useState('')
+  const [sleepHours, setSleepHours] = useState(7)
+  const [waterLiters, setWaterLiters] = useState('')
 
   // Step 5: Lifestyle
   const [workoutDays, setWorkoutDays] = useState([])
@@ -144,23 +152,24 @@ export default function OnboardingFlow() {
 
   // Step 6: Diet & Recovery
   const [diet, setDiet] = useState('')
-  const [sleepHours, setSleepHours] = useState('')
-  const [waterIntake, setWaterIntake] = useState('')
-  const [motivation, setMotivation] = useState('')
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const canProceed = useMemo(() => {
     switch (step) {
-      case 1: return name && gender && age
+      case 1: return name && gender && age && lifestyle
       case 2: return weight && height && targetWeight
-      case 3: return objective && experience
-      case 4: return limitations.length > 0 && conditions.length > 0
+      case 3: return objective && experience && identityGoal.trim()
+      case 4: {
+        const limOk = limitations.length > 0 && (limitations.includes("None \u2014 all good") || limitationNotes.trim())
+        const condOk = conditions.length > 0 && (conditions.includes('None') || conditionNotes.trim())
+        return limOk && condOk && onMedication && sleepQuality && waterLiters
+      }
       case 5: return workoutDays.length > 0 && workoutTime && sessionLength && equipment
       case 6: return diet
       default: return false
     }
-  }, [step, name, gender, age, weight, height, targetWeight, objective, experience, limitations, conditions, workoutDays, workoutTime, sessionLength, equipment, diet])
+  }, [step, name, gender, age, lifestyle, weight, height, targetWeight, objective, experience, identityGoal, limitations, limitationNotes, conditions, conditionNotes, onMedication, sleepQuality, waterLiters, workoutDays, workoutTime, sessionLength, equipment, diet])
 
   const handleNext = () => {
     if (!canProceed) return
@@ -181,13 +190,15 @@ export default function OnboardingFlow() {
     setIsSubmitting(true)
     setTimeout(() => {
       const data = {
-        name, gender, age: Number(age),
+        name, gender, age: Number(age), lifestyle,
         weight: Number(weight), height: Number(height), bodyFat: bodyFat ? Number(bodyFat) : null,
         targetWeight: Number(targetWeight),
-        objective, experience, focusAreas,
-        limitations, conditions, healthNotes,
+        objective, experience, focusAreas, identityGoal,
+        limitations, limitationNotes, conditions, conditionNotes,
+        onMedication, medicationDetails: onMedication === 'yes' ? medicationDetails : '',
+        sleepQuality, sleepHours, waterLiters,
         workoutDays, workoutTime, sessionLength, equipment,
-        diet, sleepHours: sleepHours ? Number(sleepHours) : null, waterIntake, motivation,
+        diet,
         onboardedAt: new Date().toISOString(),
       }
       localStorage.setItem('gymos_member', JSON.stringify(data))
@@ -250,6 +261,19 @@ export default function OnboardingFlow() {
               <FieldCard icon="cake" label="Age">
                 <NumInput value={age} onChange={setAge} placeholder="26" unit="yrs" />
               </FieldCard>
+              <FieldCard icon="work" label="Daily Lifestyle">
+                <p className="text-[10px] text-on-surface-variant mb-3">What best describes your <span className="text-primary">typical day</span>?</p>
+                <OptionGrid columns={2} selected={lifestyle} onSelect={setLifestyle} options={[
+                  { id: 'desk_job', icon: 'computer', label: 'Desk Job', sub: 'Office / IT / WFH' },
+                  { id: 'field_job', icon: 'engineering', label: 'Field / Site', sub: 'Construction / Outdoor' },
+                  { id: 'standing_job', icon: 'storefront', label: 'On-Feet Job', sub: 'Retail / Healthcare' },
+                  { id: 'active_job', icon: 'local_shipping', label: 'Active / Physical', sub: 'Delivery / Labour' },
+                  { id: 'student', icon: 'school', label: 'Student', sub: 'College / University' },
+                  { id: 'homemaker', icon: 'cottage', label: 'Homemaker', sub: 'Household / Parenting' },
+                  { id: 'freelancer', icon: 'laptop_mac', label: 'Freelancer', sub: 'Remote / Gig work' },
+                  { id: 'retired', icon: 'elderly', label: 'Retired', sub: 'Leisure / Part-time' },
+                ]} />
+              </FieldCard>
             </motion.div>
           )}
 
@@ -307,6 +331,14 @@ export default function OnboardingFlow() {
                     setFocusAreas(prev => prev.includes(area) ? prev.filter(a => a !== area) : [...prev, area])
                   }} />
               </FieldCard>
+
+              <FieldCard icon="emoji_objects" label="Identity Goal">
+                <p className="text-[10px] text-on-surface-variant mb-2">What personal or professional goal do you want to achieve through fitness? <span className="text-primary">Be specific.</span></p>
+                <textarea value={identityGoal} onChange={e => setIdentityGoal(e.target.value.slice(0, 200))} rows={3}
+                  placeholder="e.g. 'I want to feel confident at my sister's wedding' or 'Build stamina to ace my army physical test' or 'Look sharp for client meetings'"
+                  className="w-full bg-surface-container-high border border-outline-variant/10 rounded-xl p-3 text-sm text-on-surface placeholder:text-on-surface-variant/30 focus:border-primary/40 outline-none resize-none" />
+                <p className="text-[9px] text-on-surface-variant/50 text-right mt-1">{identityGoal.length}/200</p>
+              </FieldCard>
             </motion.div>
           )}
 
@@ -317,22 +349,79 @@ export default function OnboardingFlow() {
 
               <FieldCard icon="healing" label="Physical Limitations">
                 <p className="text-[10px] text-on-surface-variant mb-3">Areas to protect or avoid? <span className="text-primary">Select all that apply.</span></p>
-                <ChipSelect items={['Lower Back', 'Knees', 'Shoulders', 'Wrists / Elbows', 'Neck', 'Hips', "None — all good"]}
-                  selected={limitations} onToggle={item => toggleList(limitations, setLimitations, item, "None — all good")} />
+                <ChipSelect items={['Lower Back', 'Knees', 'Shoulders', 'Wrists / Elbows', 'Neck', 'Hips', "None \u2014 all good"]}
+                  selected={limitations} onToggle={item => toggleList(limitations, setLimitations, item, "None \u2014 all good")} />
+                {limitations.length > 0 && !limitations.includes("None \u2014 all good") && (
+                  <div className="mt-3">
+                    <p className="text-[9px] font-black uppercase text-primary tracking-widest mb-1.5">Describe your limitation *</p>
+                    <textarea value={limitationNotes} onChange={e => setLimitationNotes(e.target.value)} rows={2}
+                      placeholder="e.g. herniated disc L4-L5, avoid heavy squats..."
+                      className="w-full bg-surface-container-high border border-outline-variant/10 rounded-xl p-3 text-sm text-on-surface placeholder:text-on-surface-variant/30 focus:border-primary/40 outline-none resize-none" />
+                  </div>
+                )}
               </FieldCard>
 
               <FieldCard icon="favorite" label="Health Conditions">
                 <p className="text-[10px] text-on-surface-variant mb-3">Anything that affects your training:</p>
                 <ChipSelect items={['Diabetes', 'High Blood Pressure', 'Heart Condition', 'Asthma', 'Thyroid', 'PCOD/PCOS', 'Anxiety/Depression', 'None']}
                   selected={conditions} onToggle={item => toggleList(conditions, setConditions, item, 'None')} />
+                {conditions.length > 0 && !conditions.includes('None') && (
+                  <div className="mt-3">
+                    <p className="text-[9px] font-black uppercase text-primary tracking-widest mb-1.5">Tell us more about your condition *</p>
+                    <textarea value={conditionNotes} onChange={e => setConditionNotes(e.target.value)} rows={2}
+                      placeholder="e.g. Type 2 diabetes, on metformin..."
+                      className="w-full bg-surface-container-high border border-outline-variant/10 rounded-xl p-3 text-sm text-on-surface placeholder:text-on-surface-variant/30 focus:border-primary/40 outline-none resize-none" />
+                  </div>
+                )}
               </FieldCard>
 
-              {(limitations.some(l => l !== "None — all good") || conditions.some(c => c !== 'None')) && (
-                <FieldCard icon="edit_note" label="Additional Notes (optional)">
-                  <textarea value={healthNotes} onChange={e => setHealthNotes(e.target.value)} rows={3} placeholder="Any details your trainer should know..."
-                    className="w-full bg-surface-container-high border border-outline-variant/10 rounded-xl p-3 text-sm text-on-surface placeholder:text-on-surface-variant/30 focus:border-primary/40 outline-none resize-none" />
-                </FieldCard>
-              )}
+              <FieldCard icon="medication" label="Medication">
+                <p className="text-[10px] text-on-surface-variant mb-3">Are you currently on medication that affects <span className="text-primary">energy or weight</span>?</p>
+                <OptionGrid columns={2} selected={onMedication} onSelect={setOnMedication} options={[
+                  { id: 'yes', icon: 'check_circle', label: 'Yes' },
+                  { id: 'no', icon: 'cancel', label: 'No' },
+                ]} />
+                {onMedication === 'yes' && (
+                  <div className="mt-3">
+                    <p className="text-[9px] font-black uppercase text-primary tracking-widest mb-1.5">Medication Details</p>
+                    <textarea value={medicationDetails} onChange={e => setMedicationDetails(e.target.value)} rows={2}
+                      placeholder="e.g. thyroid meds, steroids, antidepressants..."
+                      className="w-full bg-surface-container-high border border-outline-variant/10 rounded-xl p-3 text-sm text-on-surface placeholder:text-on-surface-variant/30 focus:border-primary/40 outline-none resize-none" />
+                  </div>
+                )}
+              </FieldCard>
+
+              <FieldCard icon="bedtime" label="Sleep Quality">
+                <p className="text-[10px] text-on-surface-variant mb-3">How would you describe your sleep quality?</p>
+                <OptionGrid columns={3} selected={sleepQuality} onSelect={setSleepQuality} options={[
+                  { id: 'poor', icon: 'sentiment_dissatisfied', label: 'Poor' },
+                  { id: 'average', icon: 'sentiment_neutral', label: 'Average' },
+                  { id: 'good', icon: 'sentiment_very_satisfied', label: 'Good' },
+                ]} />
+                {sleepQuality && (
+                  <div className="mt-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="text-[9px] font-black uppercase text-on-surface-variant tracking-widest">Hours of sleep per night</p>
+                      <span className="text-xl font-headline font-bold text-primary">{sleepHours}<span className="text-xs text-on-surface-variant font-normal ml-0.5">hrs</span></span>
+                    </div>
+                    <input type="range" min={3} max={12} step={0.5} value={sleepHours}
+                      onChange={e => setSleepHours(Number(e.target.value))}
+                      className="w-full h-2 rounded-full appearance-none cursor-pointer range-slider"
+                      style={{
+                        background: `linear-gradient(to right, #C8FF00 0%, #C8FF00 ${((sleepHours - 3) / 9) * 100}%, #272733 ${((sleepHours - 3) / 9) * 100}%, #272733 100%)`,
+                      }} />
+                    <div className="flex justify-between text-[9px] text-on-surface-variant/50 mt-1">
+                      <span>3 hrs</span>
+                      <span>12 hrs</span>
+                    </div>
+                  </div>
+                )}
+              </FieldCard>
+
+              <FieldCard icon="water_drop" label="Daily Water Intake">
+                <p className="text-[10px] text-on-surface-variant mb-3">How many litres of water do you drink daily?</p>
+                <NumInput value={waterLiters} onChange={setWaterLiters} placeholder="3" unit="L" />
+              </FieldCard>
             </motion.div>
           )}
 
@@ -407,26 +496,9 @@ export default function OnboardingFlow() {
                 ]} />
               </FieldCard>
 
-              <div className="grid grid-cols-2 gap-3">
-                <FieldCard icon="bedtime" label="Sleep (hrs/night)">
-                  <NumInput value={sleepHours} onChange={setSleepHours} placeholder="7" unit="hrs" />
-                </FieldCard>
-                <FieldCard icon="water_drop" label="Water Intake">
-                  <OptionGrid columns={1} selected={waterIntake} onSelect={setWaterIntake} options={[
-                    { id: 'low', label: '< 2L' },
-                    { id: 'medium', label: '2-3L' },
-                    { id: 'high', label: '3L+' },
-                  ]} />
-                </FieldCard>
-              </div>
 
-              <FieldCard icon="psychology" label="Motivation (optional)">
-                <p className="text-[10px] text-on-surface-variant mb-2">Who do you want to become?</p>
-                <textarea value={motivation} onChange={e => setMotivation(e.target.value.slice(0, 150))} rows={3}
-                  placeholder="e.g. 'I want to be the strongest version of myself'"
-                  className="w-full bg-surface-container-high border border-outline-variant/10 rounded-xl p-3 text-sm text-on-surface placeholder:text-on-surface-variant/30 focus:border-primary/40 outline-none resize-none" />
-                <p className="text-[9px] text-on-surface-variant/50 text-right mt-1">{motivation.length}/150</p>
-              </FieldCard>
+
+
             </motion.div>
           )}
 
