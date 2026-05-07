@@ -1,21 +1,57 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { initChatClient, getOrCreateConversation, sendMessage } from '../../services/chatService'
+import { detectSchedule, getNextDayDate, saveReminder } from '../../utils/scheduleDetector'
 
 export default function TrainerChat() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
   const messagesEndRef = useRef(null)
 
-  const [messages, setMessages] = useState([])
+  // Check if we arrived with a trainer message from the landing page
+  const incomingTrainerMessage = location.state?.trainerMessage || null
+  const incomingTrainerName = location.state?.trainerName || null
+
+  const [messages, setMessages] = useState(() => {
+    // Seed with the trainer message if navigated from the landing page Reply button
+    if (incomingTrainerMessage) {
+      return [{
+        id: 'trainer-incoming-' + Date.now(),
+        text: incomingTrainerMessage,
+        sender: 'trainer',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isHighlighted: true,
+      }]
+    }
+    return []
+  })
   const [newMessage, setNewMessage] = useState('')
   const [conversation, setConversation] = useState(null)
   const [connectionStatus, setConnectionStatus] = useState('connecting')
   const [sending, setSending] = useState(false)
+  const [chatReminderSet, setChatReminderSet] = useState(false)
 
-  const trainerName = 'Coach Sarah'
+  const trainerName = incomingTrainerName || 'Coach Sarah'
   const trainerId = 'trainer_demo'
+
+  // Detect schedule in incoming message
+  const incomingScheduleInfo = incomingTrainerMessage ? detectSchedule(incomingTrainerMessage) : { isSchedule: false }
+
+  const handleChatReminder = () => {
+    if (!incomingScheduleInfo.isSchedule || chatReminderSet) return
+    const targetDate = incomingScheduleInfo.day ? getNextDayDate(incomingScheduleInfo.day) : new Date()
+    saveReminder({
+      text: incomingScheduleInfo.reminderText,
+      activity: incomingScheduleInfo.activity,
+      day: incomingScheduleInfo.day,
+      date: targetDate.toISOString(),
+      source: 'trainer_chat',
+      trainerName: trainerName,
+    })
+    setChatReminderSet(true)
+  }
 
   // Init Twilio
   useEffect(() => {
@@ -118,19 +154,69 @@ export default function TrainerChat() {
           const isUser = msg.sender === 'user'
           return (
             <div key={msg.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] px-4 py-3 shadow-md ${
-                isUser
-                  ? 'bg-primary text-on-primary-fixed rounded-2xl rounded-tr-sm'
-                  : 'bg-surface-container-highest text-on-surface border border-outline-variant/10 rounded-2xl rounded-tl-sm'
-              }`}>
-                <p className="text-sm font-medium leading-relaxed">{msg.text}</p>
-                <div className={`flex items-center justify-end gap-1 mt-1 ${isUser ? 'text-on-primary-fixed/70' : 'text-on-surface-variant'} text-[10px]`}>
-                  <span className="font-bold">{msg.time}</span>
-                  {isUser && connectionStatus === 'connected' && (
-                    <span className="material-symbols-outlined text-[12px]">done_all</span>
+              {msg.isHighlighted && (
+                <div className="flex flex-col items-start gap-2 max-w-[85%]">
+                  <span className="text-[10px] font-bold text-[#00FFAA] uppercase tracking-widest flex items-center gap-1 px-1">
+                    <span className="material-symbols-outlined text-xs">reply</span>
+                    Replying to this message
+                  </span>
+                  <div className="px-4 py-3 shadow-md bg-surface-container-highest text-on-surface border border-[#00FFAA]/30 rounded-2xl rounded-tl-sm relative overflow-hidden">
+                    <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#00FFAA] rounded-full" />
+                    <p className="text-sm font-medium leading-relaxed">{msg.text}</p>
+                    <div className="flex items-center justify-end gap-1 mt-1 text-on-surface-variant text-[10px]">
+                      <span className="font-bold">{msg.time}</span>
+                    </div>
+                  </div>
+
+                  {/* Schedule Reminder Card */}
+                  {incomingScheduleInfo.isSchedule && (
+                    <div className="w-full rounded-2xl border border-[#FF9500]/20 bg-gradient-to-r from-[#FF9500]/8 to-[#FFE600]/8 p-3.5 shadow-md backdrop-blur-sm">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#FF9500]/15 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="material-symbols-outlined text-[#FF9500] text-xl" style={{fontVariationSettings: "'FILL' 1"}}>event</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="material-symbols-outlined text-[#FF9500] text-xs">auto_awesome</span>
+                            <p className="text-[10px] text-[#FF9500] font-bold uppercase tracking-widest">Schedule Detected</p>
+                          </div>
+                          <p className="text-sm text-white font-semibold mb-0.5">{incomingScheduleInfo.reminderText}</p>
+                          <p className="text-[10px] text-on-surface-variant">From trainer's message — set a reminder so you don't miss it</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleChatReminder}
+                        disabled={chatReminderSet}
+                        className={`w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all active:scale-[0.98] ${
+                          chatReminderSet
+                            ? 'bg-[#00FFAA]/15 text-[#00FFAA] border border-[#00FFAA]/25'
+                            : 'bg-gradient-to-r from-[#FF9500]/25 to-[#FFE600]/25 border border-[#FF9500]/30 text-[#FFE600] hover:border-[#FF9500]/60 hover:from-[#FF9500]/35 hover:to-[#FFE600]/35 shadow-lg shadow-[#FF9500]/10'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-base" style={{fontVariationSettings: "'FILL' 1"}}>
+                          {chatReminderSet ? 'check_circle' : 'alarm_add'}
+                        </span>
+                        {chatReminderSet ? '✓ Reminder Set — You\'ll be notified' : `Set Reminder for ${incomingScheduleInfo.day || 'Session'}`}
+                      </button>
+                    </div>
                   )}
                 </div>
-              </div>
+              )}
+              {!msg.isHighlighted && (
+                <div className={`max-w-[80%] px-4 py-3 shadow-md ${
+                  isUser
+                    ? 'bg-primary text-on-primary-fixed rounded-2xl rounded-tr-sm'
+                    : 'bg-surface-container-highest text-on-surface border border-outline-variant/10 rounded-2xl rounded-tl-sm'
+                }`}>
+                  <p className="text-sm font-medium leading-relaxed">{msg.text}</p>
+                  <div className={`flex items-center justify-end gap-1 mt-1 ${isUser ? 'text-on-primary-fixed/70' : 'text-on-surface-variant'} text-[10px]`}>
+                    <span className="font-bold">{msg.time}</span>
+                    {isUser && connectionStatus === 'connected' && (
+                      <span className="material-symbols-outlined text-[12px]">done_all</span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )
         })}

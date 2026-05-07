@@ -1,287 +1,297 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import GlowOrbs from '../../components/effects/GlowOrbs'
-import ScrollReveal from '../../components/effects/ScrollReveal'
-import AnimatedCounter from '../../components/effects/AnimatedCounter'
+import { detectSchedule, getNextDayDate, saveReminder } from '../../utils/scheduleDetector'
 
-const GOAL_INFO = {
-  bulk:     { label: 'Hypertrophy', protocol: 'Push/Pull/Legs', icon: 'fitness_center' },
-  lean:     { label: 'Fat Loss',    protocol: 'Full Body Burn',  icon: 'local_fire_department' },
-  athletic: { label: 'Performance', protocol: 'Athletic Power',  icon: 'bolt' },
-  maintain: { label: 'Maintenance', protocol: 'Balanced Split',  icon: 'balance' },
-  rehab:    { label: 'Rehab',       protocol: 'Recovery Focus',  icon: 'healing' },
+const trainerMessage = "You skipped legs twice. Let's fix that Friday 💪"
+const scheduleInfo = detectSchedule(trainerMessage)
+
+// Reusable SVG Arc component for Consistency
+const ConsistencyArc = ({ score }) => {
+  // Map score to color and messaging
+  const getScoreData = (s) => {
+    if (s >= 85) return { color: '#C8FF00', title: 'Elite Status', text: 'You are an absolute machine. Consistency is paying out massive dividends.', pill: '▲ +Top 5%' };
+    if (s >= 70) return { color: '#00FFAA', title: 'Solid Grind', text: 'You\'ve shown up 9 of the last 12 sessions. Keep this up and you hit Streak Elite next week.', pill: '▲ +4 this week' };
+    if (s >= 50) return { color: '#FFE600', title: 'Building Habit', text: 'You\'re getting there. Still skipping a few days, let\'s lock in the routine.', pill: '◆ Neutral' };
+    return { color: '#FF3B30', title: 'Slipping', text: 'We missed a lot of sessions recently. Time to get back to the iron.', pill: '▼ -2 this week' };
+  }
+
+  const { color, title, text, pill } = getScoreData(score)
+
+  // Arc math (Semi-circle: dasharray ~ 188.5)
+  const radius = 40
+  const circum = 2 * Math.PI * radius
+  const arcLength = circum * 0.75 // 270 degree arc
+  const offset = arcLength - (arcLength * score) / 100
+
+  return (
+    <div className="bg-[#111316] rounded-3xl p-6 border border-outline-variant/5 shadow-lg relative overflow-hidden flex flex-col gap-6">
+      {/* Dynamic background glow based on score */}
+      <div 
+        className="absolute top-0 right-0 w-64 h-64 -mr-20 -mt-20 blur-[80px] rounded-full opacity-[0.15] transition-colors duration-500 ease-in-out" 
+        style={{ backgroundColor: color }} 
+      />
+
+      <h3 className="text-on-surface-variant text-[11px] font-bold uppercase tracking-widest relative z-10">
+        Consistency Score
+      </h3>
+
+      <div className="flex items-start gap-6 relative z-10">
+        <div className="relative shrink-0 w-24 h-24">
+          <svg className="w-full h-full -rotate-[135deg] drop-shadow-lg" viewBox="0 0 100 100">
+            {/* Track arc */}
+            <circle 
+              cx="50" cy="50" r={radius} 
+              fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8"
+              strokeDasharray={circum} strokeDashoffset={circum - arcLength}
+              strokeLinecap="round" 
+            />
+            {/* Progress arc */}
+            <circle 
+              cx="50" cy="50" r={radius} 
+              fill="none" stroke={color} strokeWidth="8"
+              strokeDasharray={circum} strokeDashoffset={circum - arcLength + offset}
+              strokeLinecap="round"
+              className="transition-all duration-700 ease-out"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center pt-1">
+            <span className="text-3xl font-headline font-black text-white">{score}</span>
+          </div>
+        </div>
+
+        <div className="flex-1 pt-1">
+          <h2 className="text-lg font-bold text-white leading-tight mb-1">{title}</h2>
+          <p className="text-[11px] text-on-surface-variant leading-relaxed mb-3 pr-2">{text}</p>
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1A3320] border border-[#234A2D]">
+            <span className="text-[#00FFAA] text-[10px] font-bold tracking-wide">{pill}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="relative z-10 pt-2 pb-1">
+        <input 
+          type="range" min="0" max="100" value={score} readOnly
+          className="w-full absolute opacity-0 cursor-pointer inset-x-0 h-6 z-20"
+        />
+        <div className="w-full h-1 bg-outline-variant/20 rounded-full relative overflow-visible">
+          <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-outline-variant/60 bg-surface shadow-sm cursor-grab active:cursor-grabbing transition-all hover:scale-110" style={{ left: `calc(${score}% - 8px)` }} />
+        </div>
+        <p className="text-center text-[10px] text-on-surface-variant/50 font-medium tracking-wide mt-3 lowercase">
+          drag to explore score states
+        </p>
+      </div>
+    </div>
+  )
 }
 
-const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-
 export default function MemberHome() {
-  const [checkedIn, setCheckedIn] = useState(false)
   const navigate = useNavigate()
   const [member, setMember] = useState(null)
+  const [interactiveScore, setInteractiveScore] = useState(75)
+  const [reminderSet, setReminderSet] = useState(false)
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('gymos_member')
-      if (saved) {
-        const d = JSON.parse(saved)
-        setMember(d)
-      }
+      if (saved) setMember(JSON.parse(saved))
     } catch (e) {}
   }, [])
 
-  // Derived state
-  const todayDay = DAY_NAMES[new Date().getDay()]
-  const isRestDay = useMemo(() => {
-    if (!member?.workoutDays) return false
-    return !member.workoutDays.includes(todayDay)
-  }, [member, todayDay])
+  const firstName = member?.name?.split(' ')[0] || 'Rajan'
+  const initials = member?.name?.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() || 'RK'
+  const todayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date().getDay()]
 
-  const goalInfo = useMemo(() => {
-    if (!member?.objective) return GOAL_INFO.bulk
-    return GOAL_INFO[member.objective] || GOAL_INFO.bulk
-  }, [member])
+  const handleDrag = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    let x = e.clientX - rect.left
+    x = Math.max(0, Math.min(x, rect.width))
+    setInteractiveScore(Math.round((x / rect.width) * 100))
+  }
 
-  const firstName = member?.name?.split(' ')[0] || 'Athlete'
-  const sessionLen = member?.sessionLength || '60'
-  const daysPerWeek = member?.workoutDays?.length || 5
-  const experience = member?.experience || 'Beginner'
-
-  // Simulated streak — in production this would come from a check-in log
-  const streak = useMemo(() => {
-    const stored = localStorage.getItem('gymos_streak')
-    if (stored) return parseInt(stored, 10)
-    const s = Math.floor(Math.random() * 14) + 3
-    localStorage.setItem('gymos_streak', s.toString())
-    return s
-  }, [])
-
-  // Weekly heatmap — based on member's actual workout days
-  const weekHeatmap = useMemo(() => {
-    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
-    const todayIdx = (new Date().getDay() + 6) % 7 // Mon=0
-    return days.map((d, i) => {
-      const isTrainingDay = member?.workoutDays?.includes(d)
-      const isToday = i === todayIdx
-      const isPast = i < todayIdx
-      return { day: d, isTrainingDay, isToday, isPast,
-        status: isToday ? 'today' : (isPast ? (isTrainingDay ? 'done' : 'rest') : (isTrainingDay ? 'upcoming' : 'rest'))
-      }
+  const handleSetReminder = () => {
+    if (!scheduleInfo.isSchedule || reminderSet) return
+    const targetDate = scheduleInfo.day ? getNextDayDate(scheduleInfo.day) : new Date()
+    saveReminder({
+      text: scheduleInfo.reminderText,
+      activity: scheduleInfo.activity,
+      day: scheduleInfo.day,
+      date: targetDate.toISOString(),
+      source: 'trainer_message',
+      trainerName: 'Trainer Aakash',
     })
-  }, [member, todayDay])
-
-  // Consistency % based on streak and days per week
-  const consistency = useMemo(() => {
-    return Math.min(99, Math.round((streak / (daysPerWeek * 2)) * 100))
-  }, [streak, daysPerWeek])
+    setReminderSet(true)
+  }
 
   return (
-    <div className="space-y-8 pb-8 relative">
-      <GlowOrbs variant="subtle" />
-      
-      {/* Coach Presence */}
-      <ScrollReveal direction="up" delay={0}>
-        <div className="flex items-center gap-3 bg-surface-container-low border border-primary/20 px-3 py-1.5 rounded-full max-w-[260px] card-hover">
-          <div className="relative shrink-0">
-            <img src="https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=100&auto=format&fit=crop" alt="Coach Sarah" className="w-7 h-7 rounded-full object-cover border border-primary/30" />
-            <div className="absolute bottom-0 right-0 w-2 h-2 bg-primary rounded-full border border-surface shadow-[0_0_5px_rgba(200,255,0,0.5)]" />
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      {/* Header */}
+      <header className="flex justify-between items-center mb-6 pl-1">
+        <div>
+          <h1 className="text-[22px] font-bold text-white tracking-tight">
+            Hey, <span className="text-[#00FFAA]">{firstName}</span> 👋
+          </h1>
+          <p className="text-xs text-on-surface-variant mt-0.5">
+            {todayName} • Let's move today
+          </p>
+        </div>
+        <div className="w-11 h-11 rounded-full bg-surface-container-highest border border-outline-variant/10 flex items-center justify-center">
+          <span className="text-sm font-bold text-on-surface-variant">{initials}</span>
+        </div>
+      </header>
+
+      {/* Grid Layout Container */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+        
+        {/* Left Column (Score & Stats) */}
+        <div className="md:col-span-12 lg:col-span-7 space-y-5">
+          {/* Consistency Card (Interactive wrapper) */}
+          <div 
+            className="cursor-ew-resize touch-pan-y relative"
+            onPointerMove={(e) => { if (e.buttons === 1) handleDrag(e) }}
+            onPointerDown={handleDrag}
+          >
+            <ConsistencyArc score={interactiveScore} />
           </div>
-          <div className="flex flex-col justify-center">
-            <span className="text-on-surface text-xs font-bold leading-none mb-0.5">Coach Sarah</span>
-            <span className="text-on-surface-variant text-[9px] leading-tight">Online · Reviewed your plan</span>
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-[#111316] rounded-2xl p-5 border border-outline-variant/5 shadow-md">
+              <div className="w-9 h-9 rounded-[10px] bg-[#2A1E1E] flex items-center justify-center mb-5">
+                <span className="text-[17px]">🔥</span>
+              </div>
+              <h4 className="text-[11px] text-on-surface-variant font-medium mb-1">Current streak</h4>
+              <div className="text-2xl font-headline font-bold text-[#FF9500] leading-none mb-1.5">6</div>
+              <p className="text-[10px] text-on-surface-variant/70">days in a row</p>
+            </div>
+            
+            <div className="bg-[#111316] rounded-2xl p-5 border border-outline-variant/5 shadow-md">
+              <div className="w-9 h-9 rounded-[10px] bg-[#231E2A] flex items-center justify-center mb-5">
+                <span className="text-[17px]">📈</span>
+              </div>
+              <h4 className="text-[11px] text-on-surface-variant font-medium mb-1">This month</h4>
+              <div className="text-2xl font-headline font-bold text-[#FF2D55] leading-none mb-1.5">14</div>
+              <p className="text-[10px] text-on-surface-variant/70">sessions logged</p>
+            </div>
           </div>
         </div>
-      </ScrollReveal>
 
-      {/* Daily Status */}
-      <ScrollReveal direction="up" delay={0.1}>
-        {isRestDay ? (
-          <section className="bg-surface-container rounded-xl p-6 relative overflow-hidden border border-outline-variant/10 shadow-lg card-hover">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary-dim/10 -mr-16 -mt-16 rounded-full blur-3xl" />
-            <div className="relative z-10 flex flex-col items-center text-center space-y-4">
-              <span className="material-symbols-outlined text-6xl text-primary-dim" style={{fontVariationSettings: "'FILL' 1"}}>self_improvement</span>
-              <div>
-                <h3 className="font-headline text-2xl font-black text-on-surface italic uppercase">Active Recovery</h3>
-                <p className="text-on-surface-variant text-sm max-w-[250px] mx-auto mt-2">Muscles grow when you rest. Hydrate, stretch, and let your CNS recover today.</p>
+        {/* Right Column (Weekly Tracker, Trainer, Quick Access) */}
+        <div className="md:col-span-12 lg:col-span-5 space-y-5">
+          {/* This Week */}
+          <div className="bg-[#111316] rounded-2xl p-6 border border-outline-variant/5 shadow-md">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-on-surface-variant text-[11px] font-bold uppercase tracking-widest">This Week</h3>
+              <div className="text-on-surface-variant text-[11px] font-medium">
+                <span className="text-lg font-headline font-bold text-white mr-1.5">2</span>/ 3 sessions
               </div>
             </div>
-          </section>
-        ) : !checkedIn ? (
-          <section className="bg-gradient-to-br from-surface-container-low to-surface-container p-6 rounded-xl relative overflow-hidden group shadow-lg border border-primary/20 card-hover">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 -mr-20 -mt-20 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700" />
-            <div className="relative z-10 flex flex-col gap-6">
-              <div>
-                <h3 className="font-headline text-2xl font-black text-on-surface uppercase italic">Training Day</h3>
-                <p className="text-on-surface-variant text-sm font-medium mt-1">The Forge is hot. Your spot is waiting, {firstName}.</p>
-              </div>
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={() => { setCheckedIn(true); navigate('/member/checkin') }}
-                  className="w-full bg-primary hover:bg-primary-dark transition-all active:scale-95 py-4 pl-4 pr-3 rounded-xl text-on-primary font-black text-sm uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center justify-between"
-                >
-                  CHECK IN
-                  <span className="material-symbols-outlined ml-2">check_circle</span>
-                </button>
-                <div className="text-center mt-1">
-                  <Link to="/member/skip" className="inline-flex items-center text-[10px] uppercase tracking-widest font-bold text-on-surface-variant/50 hover:text-on-surface-variant transition-colors">
-                    I need to skip today
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </section>
-        ) : (
-          <section className="bg-surface-container-low rounded-xl p-6 relative overflow-hidden border border-primary/20 shadow-[0_0_30px_rgba(200,255,0,0.05)]">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <span className="material-symbols-outlined text-5xl text-primary drop-shadow-[0_0_10px_rgba(200,255,0,0.5)]" style={{fontVariationSettings: "'FILL' 1"}}>check_circle</span>
-                <div className="absolute inset-0 bg-primary rounded-full animate-ping opacity-20" />
-              </div>
-              <div>
-                <h3 className="font-headline text-xl font-bold text-on-surface">You're checked in!</h3>
-                <p className="text-primary-dim text-sm font-bold mt-1">Ready to crush it.</p>
-              </div>
-            </div>
-          </section>
-        )}
-      </ScrollReveal>
-
-      {/* Protocol Card — Dynamic based on goal */}
-      {!isRestDay && (
-        <ScrollReveal direction="up" delay={0.2}>
-          <section className="relative">
-            <div className="bg-surface-container rounded-3xl overflow-hidden border border-outline-variant/10 shadow-2xl card-hover">
-              <div className="h-56 relative bg-gradient-to-br from-surface-container-highest to-surface">
-                <div className="absolute inset-0 bg-cover bg-center opacity-40 mix-blend-luminosity" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop)' }} />
-                <div className="absolute inset-0 bg-gradient-to-t from-surface-container via-surface-container/80 to-transparent" />
-                
-                <div className="absolute top-4 right-4 bg-surface/50 backdrop-blur-md px-3 py-1 rounded-full border border-outline-variant/20 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-sm text-primary">timer</span>
-                  <span className="text-xs font-bold text-on-surface font-label tracking-widest">{sessionLen} MIN</span>
-                </div>
-
-                <div className="absolute bottom-6 left-6 right-6">
-                  <span className="bg-primary text-on-primary text-[10px] font-black tracking-widest uppercase px-2 py-1 rounded-sm shadow-sm inline-block mb-3">TODAY'S PROTOCOL</span>
-                  <h2 className="text-4xl font-black font-headline text-on-surface leading-none tracking-tight">{goalInfo.protocol}<br/><span className="italic text-transparent bg-clip-text bg-gradient-to-r from-on-surface to-on-surface-variant">{goalInfo.label}</span></h2>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                  <div className="bg-surface-container-lowest p-4 rounded-2xl flex flex-col justify-between">
-                    <span className="material-symbols-outlined text-primary mb-2">fitness_center</span>
-                    <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Level</p>
-                    <p className="text-sm font-headline font-black text-on-surface capitalize">{experience}</p>
-                  </div>
-                  <div className="bg-surface-container-lowest p-4 rounded-2xl flex flex-col justify-between">
-                    <span className="material-symbols-outlined text-primary mb-2">calendar_month</span>
-                    <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Frequency</p>
-                    <p className="text-sm font-headline font-black text-on-surface">{daysPerWeek}x / week</p>
-                  </div>
-                  <div className="bg-surface-container-lowest p-4 rounded-2xl flex flex-col justify-between">
-                    <span className="material-symbols-outlined text-primary mb-2">{goalInfo.icon}</span>
-                    <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Goal</p>
-                    <p className="text-sm font-headline font-black text-on-surface">{goalInfo.label}</p>
+            <div className="flex justify-between items-center px-1">
+              {['M','T','W','T','F','S','S'].map((day, i) => (
+                <div key={i} className="flex flex-col items-center gap-2.5">
+                  <span className="text-[9px] text-on-surface-variant/70 font-semibold">{day}</span>
+                  <div className={`w-8 h-8 rounded-[11px] flex items-center justify-center ${
+                    i < 2 ? 'bg-[#00FFAA] shadow-[0_4px_12px_rgba(0,255,170,0.25)]' : 
+                    i === 4 ? 'border-[1.5px] border-[#3A82F6]' : 
+                    'bg-surface-container-highest border border-outline-variant/5'
+                  }`}>
+                    {i < 2 ? (
+                      <span className="material-symbols-outlined text-[#06060B] text-sm font-bold" style={{fontVariationSettings: "'wght' 600"}}>check</span>
+                    ) : i === 4 ? (
+                      <div className="w-[5px] h-[5px] rounded-full bg-[#3A82F6]" />
+                    ) : null}
                   </div>
                 </div>
-                <Link
-                  to="/member/plan"
-                  className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary font-black py-5 rounded-2xl text-lg shadow-xl shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-3"
-                >
-                  <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>play_circle</span>
-                  START SESSION
-                </Link>
-              </div>
+              ))}
             </div>
-          </section>
-        </ScrollReveal>
-      )}
+          </div>
 
-      {/* Behavioral Metrics Grid */}
-      <ScrollReveal direction="up" delay={0.3}>
-        <section className="grid grid-cols-2 gap-4">
-          {/* Streak / Momentum */}
-          <div className="bg-surface-container rounded-2xl p-5 border border-outline-variant/5 shadow-md relative overflow-hidden group flex flex-col justify-between card-hover">
-            <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
-              <span className="material-symbols-outlined text-9xl text-error" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
-            </div>
-            <div className="relative z-10 w-full">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-error text-sm" style={{fontVariationSettings: "'FILL' 1"}}>local_fire_department</span>
-                  <h4 className="text-on-surface-variant text-[10px] font-black uppercase tracking-widest">Momentum</h4>
+          {/* Trainer Card */}
+          <div className="bg-[#111316] rounded-2xl border border-outline-variant/5 shadow-md overflow-hidden">
+            <div className="p-4 flex items-center gap-4">
+              <div className="relative shrink-0">
+                <div className="w-12 h-12 rounded-full bg-[#1A2633] text-[#3A82F6] font-bold font-headline flex items-center justify-center">
+                  AK
                 </div>
-                <span className="text-[10px] font-bold text-on-surface-variant">
-                  <AnimatedCounter to={streak} suffix=" Days" />
-                </span>
+                <div className="absolute bottom-0.5 right-0.5 w-[10px] h-[10px] bg-[#00FFAA] border-2 border-[#111316] rounded-full" />
               </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-bold text-white leading-none mb-1.5">Trainer Aakash</h4>
+                <p className="text-[11px] text-on-surface-variant leading-tight truncate">
+                  "{trainerMessage}"
+                </p>
+              </div>
+              <button 
+                onClick={() => navigate('/member/chat/trainer', { state: { trainerMessage, trainerName: 'Trainer Aakash' } })}
+                className="flex items-center gap-1.5 bg-gradient-to-r from-[#00FFAA]/15 to-[#3A82F6]/15 border border-[#00FFAA]/25 hover:border-[#00FFAA]/50 hover:from-[#00FFAA]/25 hover:to-[#3A82F6]/25 transition-all px-4 py-2 rounded-xl text-[#00FFAA] text-xs font-bold shrink-0 shadow-sm active:scale-95"
+              >
+                <span className="material-symbols-outlined text-sm" style={{fontVariationSettings: "'FILL' 1"}}>reply</span>
+                Reply
+              </button>
+            </div>
+
+            {/* Schedule-detected Reminder Banner */}
+            {scheduleInfo.isSchedule && (
+              <div className="border-t border-outline-variant/10 px-4 py-3 bg-gradient-to-r from-[#FF9500]/5 to-[#FFE600]/5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-[#FF9500]/15 flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-[#FF9500] text-base" style={{fontVariationSettings: "'FILL' 1"}}>event</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-[#FF9500] font-bold uppercase tracking-widest">Schedule Detected</p>
+                      <p className="text-[11px] text-on-surface-variant font-medium truncate">
+                        {scheduleInfo.reminderText}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleSetReminder}
+                    disabled={reminderSet}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition-all active:scale-95 ${
+                      reminderSet
+                        ? 'bg-[#00FFAA]/15 text-[#00FFAA] border border-[#00FFAA]/25 cursor-default'
+                        : 'bg-gradient-to-r from-[#FF9500]/20 to-[#FFE600]/20 border border-[#FF9500]/30 text-[#FFE600] hover:border-[#FF9500]/60 hover:from-[#FF9500]/30 hover:to-[#FFE600]/30'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-sm" style={{fontVariationSettings: "'FILL' 1"}}>
+                      {reminderSet ? 'check_circle' : 'alarm_add'}
+                    </span>
+                    {reminderSet ? 'Reminder Set' : 'Remind Me'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Access List */}
+          <div>
+            <h3 className="text-on-surface-variant text-[11px] font-bold uppercase tracking-widest mb-4 mt-6">Quick Access</h3>
+            <div className="grid grid-cols-3 gap-3">
+              <Link to="/member/progress" className="bg-[#111316] hover:bg-[#16191E] transition-colors rounded-xl p-4 border border-outline-variant/5 shadow-sm flex flex-col items-center justify-center gap-3 h-24">
+                <div className="w-8 h-8 rounded-lg bg-[#24353B]/50 flex items-center justify-center drop-shadow-md">
+                  <span className="text-[17px] text-current font-emoji">📊</span>
+                </div>
+                <span className="text-[9px] text-on-surface-variant font-medium text-center">My Progress</span>
+              </Link>
               
-              {/* 7-day Trailing Heatmap — from real training days */}
-              <div className="flex items-center justify-between gap-1 w-full mt-4">
-                {weekHeatmap.map((d) => (
-                  <div key={d.day} className="flex flex-col items-center gap-1.5">
-                    <div className={`w-3 h-8 rounded-full ${
-                      d.isToday ? 'bg-surface-container-highest border border-primary/50 animate-pulse' :
-                      d.status === 'rest' ? 'bg-surface-container-highest border border-outline-variant/20' :
-                      d.status === 'done' ? 'bg-error shadow-[0_0_8px_rgba(255,80,80,0.4)]' :
-                      'bg-primary/20 border border-primary/30'
-                    }`} />
-                    <span className={`text-[8px] font-bold ${d.isToday ? 'text-primary' : 'text-on-surface-variant/50'}`}>{d.day.charAt(0)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="relative z-10 mt-4 border-t border-outline-variant/10 pt-3 flex justify-between items-center">
-              <p className="text-[10px] text-on-surface-variant uppercase tracking-widest font-bold">Current Streak</p>
-              <p className="text-sm font-headline font-black text-on-surface">
-                <AnimatedCounter to={streak} suffix=" Days" />
-              </p>
-            </div>
-          </div>
-          
-          {/* Consistency */}
-          <div className="bg-surface-container rounded-2xl p-5 border border-outline-variant/5 shadow-md flex flex-col justify-between card-hover">
-            <h4 className="text-on-surface-variant text-[10px] font-black uppercase tracking-widest mb-4">Consistency</h4>
-            <div className="flex items-center gap-4">
-              <div className="relative w-14 h-14 shrink-0">
-                <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
-                  <circle className="text-surface-container-highest" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" strokeWidth="12" />
-                  <circle className="text-primary drop-shadow-[0_0_8px_rgba(200,255,0,0.4)]" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" strokeDasharray="251.2" strokeDashoffset={251.2 - (251.2 * consistency / 100)} strokeLinecap="round" strokeWidth="12" style={{ transition: 'stroke-dashoffset 1s ease-in-out' }} />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-sm font-headline font-black text-on-surface">
-                    <AnimatedCounter to={consistency} suffix="%" />
-                  </span>
+              <Link to="/member/book-session" className="bg-[#111316] hover:bg-[#16191E] transition-colors rounded-xl p-4 border border-outline-variant/5 shadow-sm flex flex-col items-center justify-center gap-3 h-24">
+                <div className="w-8 h-8 rounded-lg bg-[#2A3141]/50 flex items-center justify-center drop-shadow-md">
+                  <span className="text-[17px] text-current font-emoji">🗓️</span>
                 </div>
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-primary mb-1">{consistency >= 80 ? 'Elite Tier' : consistency >= 60 ? 'Strong' : 'Building'}</p>
-                <p className="text-[9px] text-on-surface-variant uppercase">{daysPerWeek} days/wk</p>
-              </div>
+                <span className="text-[9px] text-on-surface-variant font-medium text-center">Book Session</span>
+              </Link>
+              
+              <Link to="/member/achievements" className="bg-[#111316] hover:bg-[#16191E] transition-colors rounded-xl p-4 border border-outline-variant/5 shadow-sm flex flex-col items-center justify-center gap-3 h-24">
+                <div className="w-8 h-8 rounded-lg bg-[#3C2E1F]/50 flex items-center justify-center drop-shadow-md">
+                  <span className="text-[17px] text-current font-emoji">🏅</span>
+                </div>
+                <span className="text-[9px] text-on-surface-variant font-medium text-center">Milestones</span>
+              </Link>
             </div>
           </div>
-        </section>
-      </ScrollReveal>
 
-      {/* Explore CTA */}
-      <ScrollReveal direction="up" delay={0.4}>
-        <Link to="/member/muscle-select" className="block">
-          <section className="bg-gradient-to-br from-surface-container to-surface-container-high rounded-2xl p-5 border border-primary/15 shadow-lg relative overflow-hidden group card-hover">
-            <div className="absolute -right-8 -bottom-8 opacity-10 group-hover:opacity-20 transition-opacity duration-500">
-              <span className="material-symbols-outlined text-[120px] text-primary" style={{fontVariationSettings: "'FILL' 1"}}>3d_rotation</span>
-            </div>
-            <div className="relative z-10 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-primary text-2xl">explore</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-headline font-bold text-on-surface text-sm">AI Muscle Targeting</h3>
-                <p className="text-on-surface-variant text-xs mt-0.5">Select muscles on a 3D model → get a custom AI workout</p>
-              </div>
-              <span className="material-symbols-outlined text-on-surface-variant/50 group-hover:text-primary transition-colors">arrow_forward</span>
-            </div>
-          </section>
-        </Link>
-      </ScrollReveal>
-
+        </div>
+      </div>
     </div>
   )
 }

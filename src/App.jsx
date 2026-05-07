@@ -6,6 +6,8 @@ import OnboardingFlow from './pages/member/OnboardingFlow'
 import MemberLayout from './layouts/MemberLayout'
 import MemberHome from './pages/member/MemberHome'
 import WeeklyPlan from './pages/member/WeeklyPlan'
+import MyProgress from './pages/member/MyProgress'
+import BookSession from './pages/member/BookSession'
 import SkipSession from './pages/member/SkipSession'
 import CheckinConfirmed from './pages/member/CheckinConfirmed'
 import RecoveryPlan from './pages/member/RecoveryPlan'
@@ -46,6 +48,8 @@ export default function App() {
       <Route path="/member" element={<MemberLayout />}>
         <Route index element={<MemberHome />} />
         <Route path="plan" element={<WeeklyPlan />} />
+        <Route path="progress" element={<MyProgress />} />
+        <Route path="book-session" element={<BookSession />} />
         <Route path="muscle-select" element={<MuscleSelector />} />
         <Route path="exercises" element={<ExerciseLibrary />} />
         <Route path="workout-plan" element={<WorkoutPlanView />} />
