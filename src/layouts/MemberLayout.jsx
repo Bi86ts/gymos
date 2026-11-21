@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import { Outlet, NavLink, useLocation, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 
@@ -14,19 +14,27 @@ export default function MemberLayout() {
   const location = useLocation()
   const [firstName, setFirstName] = useState('Athlete')
   const [profilePhoto, setProfilePhoto] = useState(null)
+  const [hasOnboarded, setHasOnboarded] = useState(null) // null = checking, true/false = known
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('gymos_member')
       if (saved) {
         const data = JSON.parse(saved)
-        if (data.name) {
+        if (data.name && data.onboardedAt) {
           setFirstName(data.name.split(' ')[0])
+          setHasOnboarded(true)
+        } else {
+          setHasOnboarded(false)
         }
+      } else {
+        setHasOnboarded(false)
       }
       const photo = localStorage.getItem('gymos_profile_photo')
       if (photo) setProfilePhoto(photo)
-    } catch (e) {}
+    } catch (e) {
+      setHasOnboarded(false)
+    }
   }, [])
 
   // Listen for photo changes (when user uploads on profile page)
@@ -42,6 +50,14 @@ export default function MemberLayout() {
     }, 1000)
     return () => { window.removeEventListener('storage', onStorage); clearInterval(interval) }
   }, [profilePhoto])
+
+  // While checking, show nothing (brief flash)
+  if (hasOnboarded === null) return null
+
+  // If not onboarded, redirect to onboarding flow
+  if (hasOnboarded === false) {
+    return <Navigate to="/onboarding" replace />
+  }
 
   return (
     <div className="min-h-screen pb-28">

@@ -22,6 +22,11 @@ export default function TrainerLayout() {
     if (photo) setTrainerPhoto(photo)
   }, [])
 
+  // Scroll to top whenever the route changes
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [location.pathname])
+
   const firstName = trainer.name?.split(' ').pop() || 'Coach'
 
   return (
